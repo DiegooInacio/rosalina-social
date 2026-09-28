@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: rosalina
+      POSTGRES_USER: rosalina
+      POSTGRES_PASSWORD: rosalina
+    ports: ["5432:5432"]
+    volumes: [postgres_data:/var/lib/postgresql/data]
+  api:
+    build: .
+    depends_on: [postgres]
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/rosalina
+      DATABASE_USERNAME: rosalina
+      DATABASE_PASSWORD: rosalina
+      JWT_SECRET: ${JWT_SECRET:-change-this-development-secret-to-a-base64-encoded-key-with-at-least-32-bytes}
+    ports: ["8080:8080"]
+volumes:
+  postgres_data:

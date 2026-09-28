@@ -1,0 +1,2 @@
+server.ssl.enabled: ${SSL_ENABLED:true}
+springdoc.swagger-ui.enabled: false

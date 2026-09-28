@@ -1,0 +1,3 @@
+package br.org.rosalina.social.student;
+import java.util.*; import org.springframework.data.domain.*; import org.springframework.data.jpa.repository.*;
+public interface StudentRepository extends JpaRepository<Student,UUID> { boolean existsByCpf(String cpf); @EntityGraph(attributePaths={"activity","relatives","relatives.occupation","relatives.education","socioeconomicProfile"}) Optional<Student> findWithDetailsById(UUID id); @Query("select s from Student s where (:name is null or lower(s.name) like lower(concat('%',:name,'%'))) and (:cpf is null or s.cpf=:cpf) and (:status is null or s.status=:status)") Page<Student> search(String name,String cpf,StudentStatus status,Pageable pageable); }

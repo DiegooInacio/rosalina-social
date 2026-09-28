@@ -1,0 +1,9 @@
+package br.org.rosalina.social.user;
+import br.org.rosalina.social.audit.AuditService; import br.org.rosalina.social.common.*; import jakarta.validation.Valid; import jakarta.validation.constraints.*; import java.util.*; import org.springframework.http.*; import org.springframework.security.crypto.password.PasswordEncoder; import org.springframework.web.bind.annotation.*;
+@RestController @RequestMapping("/api/v1/users") public class UserController {
+ private final AppUserRepository repo; private final PasswordEncoder encoder; private final AuditService audit; public UserController(AppUserRepository r,PasswordEncoder e,AuditService a){repo=r;encoder=e;audit=a;}
+ public record Request(@NotBlank @Size(max=150) String name,@NotBlank @Email String email,@NotNull Role role,@NotBlank @Size(min=8,max=100) String password){} public record StatusRequest(boolean active){} public record Response(UUID id,String name,String email,Role role,boolean active){static Response of(AppUser u){return new Response(u.getId(),u.getName(),u.getEmail(),u.getRole(),u.isActive());}}
+ @GetMapping List<Response> list(){return repo.findAll().stream().map(Response::of).toList();}
+ @PostMapping @ResponseStatus(HttpStatus.CREATED) Response create(@Valid @RequestBody Request r){if(repo.existsByEmailIgnoreCase(r.email()))throw new ApiException(HttpStatus.CONFLICT,"E-mail já cadastrado.");AppUser u=new AppUser();u.setName(r.name());u.setEmail(r.email());u.setRole(r.role());u.setPasswordHash(encoder.encode(r.password()));repo.save(u);audit.record("CREATE","USER",u.getId());return Response.of(u);}
+ @PatchMapping("/{id}") Response status(@PathVariable UUID id,@RequestBody StatusRequest r){AppUser u=repo.findById(id).orElseThrow(()->new NotFoundException("Usuário não encontrado."));u.setActive(r.active());repo.save(u);audit.record(r.active()?"ACTIVATE":"DEACTIVATE","USER",id);return Response.of(u);}
+}

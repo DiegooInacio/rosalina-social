@@ -1,0 +1,6 @@
+package br.org.rosalina.social.auth;
+import br.org.rosalina.social.user.*; import io.jsonwebtoken.Claims; import jakarta.servlet.*; import jakarta.servlet.http.*; import java.io.IOException; import org.springframework.security.authentication.UsernamePasswordAuthenticationToken; import org.springframework.security.core.authority.SimpleGrantedAuthority; import org.springframework.security.core.context.SecurityContextHolder; import org.springframework.stereotype.Component;
+@Component public class JwtAuthenticationFilter extends OncePerRequestFilter {
+ private final JwtService jwt; private final AppUserRepository users; public JwtAuthenticationFilter(JwtService j,AppUserRepository u){jwt=j;users=u;}
+ @Override protected void doFilterInternal(HttpServletRequest req,HttpServletResponse res,FilterChain chain)throws ServletException,IOException {String h=req.getHeader("Authorization");if(h!=null&&h.startsWith("Bearer "))try{Claims c=jwt.parse(h.substring(7));if("access".equals(c.get("type",String.class)))users.findByEmailIgnoreCase(c.getSubject()).filter(AppUser::isActive).ifPresent(u->{var a=new UsernamePasswordAuthenticationToken(u.getEmail(),null,java.util.List.of(new SimpleGrantedAuthority("ROLE_"+u.getRole().name())));SecurityContextHolder.getContext().setAuthentication(a);});}catch(Exception ignored){} chain.doFilter(req,res);}
+}

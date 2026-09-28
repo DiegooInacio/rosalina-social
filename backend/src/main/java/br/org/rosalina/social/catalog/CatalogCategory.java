@@ -1,0 +1,2 @@
+package br.org.rosalina.social.catalog;
+public enum CatalogCategory { ATIVIDADE, OCUPACAO, ESCOLARIDADE, TIPO_MORADIA, FORMA_AQUISICAO, TIPO_VEDACAO, TIPO_PISO, AGUA, ESGOTO, COLETA_LIXO }

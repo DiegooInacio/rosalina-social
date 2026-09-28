@@ -1,0 +1,10 @@
+package br.org.rosalina.social.catalog;
+import br.org.rosalina.social.audit.AuditService; import br.org.rosalina.social.common.*; import jakarta.validation.Valid; import jakarta.validation.constraints.*; import java.util.*; import org.springframework.http.*; import org.springframework.web.bind.annotation.*;
+@RestController @RequestMapping("/api/v1/catalogs") public class CatalogController {
+ private final CatalogItemRepository repo; private final AuditService audit; public CatalogController(CatalogItemRepository r,AuditService a){repo=r;audit=a;}
+ public record Request(@NotNull CatalogCategory category,@NotBlank @Size(max=150) String name){} public record StatusRequest(boolean active){} public record Response(UUID id,CatalogCategory category,String name,boolean active){static Response of(CatalogItem i){return new Response(i.getId(),i.getCategory(),i.getName(),i.isActive());}}
+ @GetMapping List<Response> list(@RequestParam(required=false) CatalogCategory category){List<CatalogItem> items=category==null?repo.findAll():repo.findByCategoryOrderByName(category);return items.stream().map(Response::of).toList();}
+ @PostMapping @ResponseStatus(HttpStatus.CREATED) Response create(@Valid @RequestBody Request r){if(repo.existsByCategoryAndNameIgnoreCase(r.category(),r.name()))throw new ApiException(HttpStatus.CONFLICT,"Item já existe nesta categoria.");CatalogItem i=new CatalogItem();i.setCategory(r.category());i.setName(r.name());repo.save(i);audit.record("CREATE","CATALOG",i.getId());return Response.of(i);}
+ @PutMapping("/{id}") Response update(@PathVariable UUID id,@Valid @RequestBody Request r){CatalogItem i=repo.findById(id).orElseThrow(()->new NotFoundException("Item de catálogo não encontrado."));i.setCategory(r.category());i.setName(r.name());repo.save(i);audit.record("UPDATE","CATALOG",id);return Response.of(i);}
+ @PatchMapping("/{id}") Response status(@PathVariable UUID id,@RequestBody StatusRequest r){CatalogItem i=repo.findById(id).orElseThrow(()->new NotFoundException("Item de catálogo não encontrado."));i.setActive(r.active());repo.save(i);audit.record(r.active()?"ACTIVATE":"DEACTIVATE","CATALOG",id);return Response.of(i);}
+}
