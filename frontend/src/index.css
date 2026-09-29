@@ -1,0 +1,23 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-brand-50: #f0fdf7;
+  --color-brand-100: #dcfce9;
+  --color-brand-500: #16a36a;
+  --color-brand-600: #0d8555;
+  --color-brand-700: #0b6b47;
+}
+
+@layer base {
+  body {
+    @apply min-w-80 bg-slate-50 text-slate-900 antialiased;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600;
+  }
+}
