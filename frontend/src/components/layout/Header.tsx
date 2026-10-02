@@ -2,7 +2,7 @@ import { Link } from 'react-router'
 
 export function Header() {
   return (
-    <header className="border-b border-slate-200 bg-white">
+    <header className="border-b-4 border-accent-500">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
         <Link to="/" className="text-lg font-bold text-brand-700">
           Rosalina Social
