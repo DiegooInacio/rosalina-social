@@ -48,3 +48,7 @@ export function isValidPhone(value: string) {
 export function isValidCep(value: string) {
   return onlyDigits(value).length === 8
 }
+
+export function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+}
