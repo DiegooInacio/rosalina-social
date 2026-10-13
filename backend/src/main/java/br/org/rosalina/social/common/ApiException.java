@@ -1,3 +1,21 @@
 package br.org.rosalina.social.common;
+
+import java.util.Map;
 import org.springframework.http.HttpStatus;
-public class ApiException extends RuntimeException { private final HttpStatus status; public ApiException(HttpStatus s,String m){super(m);status=s;} public HttpStatus status(){return status;} }
+
+public class ApiException extends RuntimeException {
+  private final HttpStatus status;
+  private final Map<String, String> fields;
+
+  public ApiException(HttpStatus status, String message) { this(status, message, Map.of()); }
+  public ApiException(HttpStatus status, String message, Map<String, String> fields) {
+    super(message);
+    this.status = status;
+    this.fields = Map.copyOf(fields);
+  }
+  public HttpStatus status() { return status; }
+  public Map<String, String> fields() { return fields; }
+  public static ApiException field(String field, String message) {
+    return new ApiException(HttpStatus.BAD_REQUEST, message, Map.of(field, message));
+  }
+}
