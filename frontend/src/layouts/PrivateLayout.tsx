@@ -1,8 +1,13 @@
-import { Outlet } from 'react-router'
+import { Navigate, Outlet } from 'react-router'
 import { Header } from '../components/layout/Header'
 import { Sidebar } from '../components/layout/Sidebar'
+import { getAccessToken } from '../lib/auth'
 
 export function PrivateLayout() {
+  if (!getAccessToken()) {
+    return <Navigate to="/login" replace />
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />

@@ -1,11 +1,16 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-brand-50: #f0fdf7;
-  --color-brand-100: #dcfce9;
-  --color-brand-500: #16a36a;
-  --color-brand-600: #0d8555;
-  --color-brand-700: #0b6b47;
+  --color-brand-50: #f0faf3;
+  --color-brand-100: #dbf3e2;
+  --color-brand-500: #2f9e55;
+  --color-brand-600: #1f7a3a;   /* verde da logo, cor principal */
+  --color-brand-700: #19632f;
+
+  --color-accent-50: #fff4f0;
+  --color-accent-100: #fde8e1;
+  --color-accent-500: #e8643f;  /* laranja da logo */
+  --color-accent-600: #d14a26;
 }
 
 @layer base {

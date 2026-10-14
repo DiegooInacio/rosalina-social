@@ -1,21 +1,39 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
+import { useNavigate } from 'react-router'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
+import { ApiError } from '../../lib/api'
+import { setTokens } from '../../lib/auth'
+import { login } from './auth.api'
 import { loginSchema, type LoginFormData } from './auth.schema'
 
 export function LoginForm() {
+  const navigate = useNavigate()
   const {
-    formState: { errors },
+    formState: { errors, isSubmitting },
     handleSubmit,
     register,
+    setError,
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
   })
 
-  function handleLogin(_data: LoginFormData) {
-    window.alert('A integração com a autenticação ainda será implementada.')
+  async function handleLogin(data: LoginFormData) {
+    try {
+      const tokens = await login(data.email, data.password)
+      setTokens(tokens.accessToken, tokens.refreshToken)
+      navigate('/app')
+    } catch (error) {
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+        setError('root', { message: 'E-mail ou senha incorretos.' })
+      } else {
+        setError('root', {
+          message: 'Não foi possível conectar ao servidor. Tente novamente.',
+        })
+      }
+    }
   }
 
   return (
@@ -36,8 +54,13 @@ export function LoginForm() {
         error={errors.password?.message}
         {...register('password')}
       />
-      <Button type="submit" className="w-full">
-        Entrar
+      {errors.root && (
+        <p role="alert" className="text-sm text-red-600">
+          {errors.root.message}
+        </p>
+      )}
+      <Button type="submit" className="w-full" disabled={isSubmitting}>
+        {isSubmitting ? 'Entrando...' : 'Entrar'}
       </Button>
     </form>
   )
