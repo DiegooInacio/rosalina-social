@@ -14,6 +14,7 @@ public final class PopulationDtos {
   private PopulationDtos() {}
   public enum HousingType { PROPRIA, ALUGADA, CEDIDA, FINANCIADA }
   public enum DocumentType { RG, CPF, CIN }
+  public enum SurveyStatus {DRAFT, COMPLETED}
 
   @Schema(name = "PopulationSurveyRequest")
   public record Request(
@@ -24,6 +25,18 @@ public final class PopulationDtos {
       @Schema(description = "Pode ser vazia. Se preenchida, deve conter exatamente um responsável.")
       @Valid List<@NotNull Member> members,
       @Valid Authorizations authorizations, @Valid Declaration declaration) {}
+  
+   @Schema(name = "PopulationSurveyDraftRequest")
+  public record DraftRequest(
+      LocalDate referenceDate,
+      Responsible responsible,
+      Address address,
+      Housing housing,
+      WorkAndBenefits workAndBenefits,
+      Health health,
+      List<Member> members,
+      Authorizations authorizations,
+      Declaration declaration) {}
 
   @Schema(name = "PopulationResponsible")
   public record Responsible(
@@ -90,10 +103,11 @@ public final class PopulationDtos {
   public record FinancialSummary(int memberCount, boolean incomeComplete, BigDecimal totalIncome, BigDecimal perCapitaIncome) {}
 
   @Schema(name = "PopulationSurveyResponse")
-  public record Response(UUID id, LocalDate referenceDate, Responsible responsible, Address address,
-      Housing housing, WorkAndBenefits workAndBenefits, Health health, List<Member> members,
-      Authorizations authorizations, Declaration declaration, @Schema(accessMode = Schema.AccessMode.READ_ONLY) FinancialSummary financialSummary,
-      UUID createdBy, Instant createdAt, Instant updatedAt) {}
+  public record Response(UUID id, SurveyStatus status, LocalDate referenceDate, Responsible responsible, Address address,
+    Housing housing, WorkAndBenefits workAndBenefits, Health health, List<Member> members,
+    Authorizations authorizations, Declaration declaration,
+    @Schema(accessMode = Schema.AccessMode.READ_ONLY) FinancialSummary financialSummary,
+    UUID createdBy, Instant createdAt, Instant updatedAt) {}
 
   @Schema(name = "PopulationSurveyListResponse")
   public record ListResponse(UUID id, String responsibleName, LocalDate referenceDate, Instant updatedAt) {}
