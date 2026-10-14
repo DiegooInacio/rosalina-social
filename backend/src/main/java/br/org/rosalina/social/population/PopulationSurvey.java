@@ -17,6 +17,8 @@ public class PopulationSurvey {
   @Column(name = "responsible_name", nullable = false, length = 150) String responsibleName;
   @Column(name = "responsible_cpf", length = 11) String responsibleCpf;
   @Column(name = "status", nullable = false, length = 20) String status = "COMPLETED";
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "draft_data", columnDefinition = "jsonb") String draftData;
   @JdbcTypeCode(SqlTypes.JSON) @Column(nullable = false, columnDefinition = "jsonb") PopulationDtos.SurveyData data;
   @OneToMany(mappedBy = "survey", cascade = CascadeType.ALL, orphanRemoval = true)
   @OrderBy("position ASC") List<PopulationMember> members = new ArrayList<>();
