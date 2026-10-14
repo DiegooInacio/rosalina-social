@@ -2,10 +2,11 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { FormProvider, useForm } from 'react-hook-form'
 import { Button } from '../../components/ui/Button'
-import { FormSection } from '../../components/ui/FormSection'
 import { ApiError } from '../../lib/api'
 import { IdentificationSection } from './sections/IdentificationSection'
 import { FamilySection } from './sections/FamilySection'
+import { ParentsRelationshipSection } from './sections/ParentsRelationshipSection'
+import { SocioeconomicSection } from './sections/SocioeconomicSection'
 import { createStudent } from './student.api'
 import {
   studentDefaultValues,
@@ -13,12 +14,6 @@ import {
   toStudentRequest,
   type StudentFormData,
 } from './student.schema'
-
-// Seções que ainda vão ser construídas
-const pendingSections = [
-  ['Situação dos pais', 'Situação familiar informada no cadastro.'],
-  ['Situação socioeconômica', 'Moradia, saneamento, despesas, renda e benefícios.'],
-] as const
 
 type SubmitMessage = { type: 'success' | 'error'; text: string }
 
@@ -43,6 +38,13 @@ export function StudentRegistrationForm() {
       reset(studentDefaultValues)
       setSubmitMessage({ type: 'success', text: 'Aluno cadastrado com sucesso.' })
     } catch (error) {
+      if (error instanceof ApiError) {
+        for (const [field, message] of Object.entries(error.fields)) {
+          if (field.startsWith('socioeconomic.') || field === 'parentsRelationshipStatus') {
+            methods.setError(field as Parameters<typeof methods.setError>[0], { message })
+          }
+        }
+      }
       const text =
         error instanceof ApiError && error.status === 400
           ? `O servidor recusou os dados: ${error.message}`
@@ -56,9 +58,8 @@ export function StudentRegistrationForm() {
       <form className="mt-8 space-y-5" onSubmit={handleSubmit(onSubmit)} noValidate>
         <IdentificationSection />
         <FamilySection />
-        {pendingSections.map(([title, description]) => (
-          <FormSection key={title} title={title} description={description} />
-        ))}
+        <ParentsRelationshipSection />
+        <SocioeconomicSection />
 
         {submitMessage && (
           <p
