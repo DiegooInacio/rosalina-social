@@ -8,3 +8,7 @@ CHECK (status IN ('DRAFT', 'COMPLETED'));
 
 CREATE INDEX idx_population_survey_status
 ON population_survey (status);
+
+ALTER TABLE population_survey
+ADD COLUMN draft_data JSONB;
+
