@@ -86,7 +86,8 @@ public class PopulationSurveyService {
   private Response response(PopulationSurvey survey) {
     SurveyData d = survey.data;
     List<Member> members = survey.members.stream().map(PopulationMember::response).toList();
-    return new Response(survey.id, survey.referenceDate, d.responsible(), d.address(), d.housing(), d.workAndBenefits(),
+    return new Response(survey.id, SurveyStatus.valueOf(survey.status), survey.referenceDate,
+        d.responsible(), d.address(), d.housing(), d.workAndBenefits(),
         d.health(), members, d.authorizations(), d.declaration(), IncomeCalculator.calculate(members),
         survey.createdBy, survey.createdAt, survey.updatedAt);
   }
