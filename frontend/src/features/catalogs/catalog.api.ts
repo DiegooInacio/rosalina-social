@@ -11,6 +11,12 @@ export type CatalogCategory =
   | 'AGUA'
   | 'ESGOTO'
   | 'COLETA_LIXO'
+  | 'SEXO_NASCIMENTO'
+  | 'IDENTIFICACAO_RACIAL'
+  | 'GENERO'
+  | 'ORIENTACAO_SEXUAL'
+  | 'ESTADO_CIVIL'
+  | 'TIPO_ESCOLA'
 
 export type CatalogItem = {
   id: string
