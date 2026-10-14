@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { brDateToIso } from '../../lib/dates'
 import { blankToUndefined, optional } from '../../lib/forms'
+import { socioeconomicDefaultValues, socioeconomicSchema, toSocioeconomicRequest } from './socioeconomic.schema'
 import {
   isValidCep,
   isValidCpf,
@@ -19,6 +20,16 @@ const optionalEmail = z
   .string()
   .max(254, 'O e-mail pode ter no máximo 254 caracteres.')
   .refine((value) => value === '' || isValidEmail(value), 'Informe um e-mail válido.')
+
+export const parentsRelationshipStatuses = [
+  'CASADOS',
+  'SOLTEIROS',
+  'DIVORCIADOS',
+  'UNIAO_ESTAVEL',
+  'MAE_VIUVA',
+  'PAI_VIUVO',
+  'FALECIDOS',
+] as const
 
 export const studentSchema = z
   .object({
@@ -51,9 +62,13 @@ export const studentSchema = z
     guardianEmail: optionalEmail,
     studentPhone: optional(isValidPhone, 'Informe um telefone válido com DDD.'),
     studentEmail: optionalEmail,
+    parentsRelationshipStatus: z.enum(['', ...parentsRelationshipStatuses], {
+      error: 'Selecione uma situação dos pais válida.',
+    }),
     father: relativeSchema,
     mother: relativeSchema,
     guardian: relativeSchema,
+    socioeconomic: socioeconomicSchema,
   })
   .superRefine((data, ctx) => {
     // O backend exige o nome do responsável
@@ -104,9 +119,11 @@ export const studentDefaultValues: StudentFormData = {
   guardianEmail: '',
   studentPhone: '',
   studentEmail: '',
+  parentsRelationshipStatus: '',
   father: { ...relativeDefaultValues },
   mother: { ...relativeDefaultValues },
   guardian: { ...relativeDefaultValues },
+  socioeconomic: { ...socioeconomicDefaultValues },
 }
 
 // Transforma os dados do formulário no formato que a API espera
@@ -142,6 +159,8 @@ export function toStudentRequest(data: StudentFormData) {
     guardianEmail: blankToUndefined(data.guardianEmail),
     studentPhone: blankToUndefined(data.studentPhone),
     studentEmail: blankToUndefined(data.studentEmail),
+    parentsRelationshipStatus: data.parentsRelationshipStatus || undefined,
     relatives,
+    socioeconomic: toSocioeconomicRequest(data.socioeconomic),
   }
 }
