@@ -53,7 +53,8 @@ function PersonFields({
         <div className="sm:col-span-2">
           <Input
             id={`${person}-name`}
-            label="Nome"
+              label={person === 'guardian' ? 'Nome do responsável (obrigatório)' : 'Nome'}
+              aria-required={person === 'guardian'}
             error={fieldErrors?.name?.message}
             {...register(`${person}.name`)}
           />

@@ -5,7 +5,8 @@ import { socioeconomicDefaultValues, socioeconomicSchema, toSocioeconomicRequest
 import {
   isValidCep,
   isValidCpf,
-  isValidDate,
+  isPastDate,
+  isPastOrPresentDate,
   isValidEmail,
   isValidPhone,
 } from '../../lib/validators'
@@ -39,22 +40,22 @@ export const studentSchema = z
       .trim()
       .min(1, 'Informe o nome do aluno.')
       .max(150, 'O nome pode ter no máximo 150 caracteres.'),
-    activityId: z.string().min(1, 'Selecione a atividade.'),
+    activityId: z.uuid('Selecione uma atividade válida.'),
     birthDate: z
       .string()
       .min(1, 'Informe a data de nascimento.')
-      .refine(isValidDate, 'Informe uma data válida (dd/mm/aaaa).'),
-    rg: z.string(),
+      .refine(isPastDate, 'Informe uma data de nascimento válida e anterior a hoje.'),
+    rg: z.string().trim().max(30, 'Informe no máximo 30 caracteres.'),
     cpf: optional(isValidCpf, 'Informe um CPF válido.'),
     cadunico: z.boolean(),
-    nis: z.string(),
-    nationalHealthCard: z.string(),
-    address: z.string(),
-    neighborhood: z.string(),
-    referencePoint: z.string(),
-    city: z.string(),
+    nis: z.string().trim().regex(/^$|^\d{1,20}$/, 'Informe até 20 dígitos para o NIS.'),
+    nationalHealthCard: z.string().trim().regex(/^$|^\d{1,20}$/, 'Informe até 20 dígitos para o Cartão Nacional de Saúde.'),
+    address: z.string().trim().max(255, 'Informe no máximo 255 caracteres.'),
+    neighborhood: z.string().trim().max(120, 'Informe no máximo 120 caracteres.'),
+    referencePoint: z.string().trim().max(255, 'Informe no máximo 255 caracteres.'),
+    city: z.string().trim().max(120, 'Informe no máximo 120 caracteres.'),
     zipCode: optional(isValidCep, 'Informe um CEP válido.'),
-    startDate: optional(isValidDate, 'Informe uma data válida (dd/mm/aaaa).'),
+    startDate: optional(isPastOrPresentDate, 'Informe uma data de início válida, até hoje.'),
     guardianPhone: z
       .string()
       .min(1, 'Informe o telefone do responsável.')

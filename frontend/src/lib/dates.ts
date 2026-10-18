@@ -9,3 +9,11 @@ export function isoToBrDate(value: string) {
   const [year, month, day] = value.split('-')
   return `${day}/${month}/${year}`
 }
+
+export function todayInFortaleza() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Fortaleza', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date())
+  const part = (type: string) => parts.find((item) => item.type === type)?.value
+  return `${part('day')}/${part('month')}/${part('year')}`
+}
