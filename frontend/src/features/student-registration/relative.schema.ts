@@ -1,20 +1,21 @@
 import { z } from 'zod'
 import { brDateToIso } from '../../lib/dates'
 import { blankToUndefined, optional } from '../../lib/forms'
-import { isValidCpf, isValidDate, isValidPhone } from '../../lib/validators'
+import { optionalCatalogId } from '../../lib/form-fields'
+import { isValidCpf, isPastDate, isValidPhone } from '../../lib/validators'
 
 // Regras de UMA pessoa da família (pai, mãe ou responsável)
 export const relativeSchema = z.object({
-  kinship: z.string(),
+  kinship: z.string().trim().max(100, 'Informe no máximo 100 caracteres.'),
   name: z.string().trim().max(150, 'O nome pode ter no máximo 150 caracteres.'),
-  birthDate: optional(isValidDate, 'Informe uma data válida (dd/mm/aaaa).'),
-  occupationId: z.string(),
+  birthDate: optional(isPastDate, 'Informe uma data de nascimento válida e anterior a hoje.'),
+  occupationId: optionalCatalogId,
   literate: z.boolean(),
-  educationId: z.string(),
+  educationId: optionalCatalogId,
   phone: optional(isValidPhone, 'Informe um telefone válido com DDD.'),
-  rg: z.string(),
+  rg: z.string().trim().max(30, 'Informe no máximo 30 caracteres.'),
   cpf: optional(isValidCpf, 'Informe um CPF válido.'),
-  voterRegistration: z.string(),
+  voterRegistration: z.string().trim().max(30, 'Informe no máximo 30 caracteres.'),
 })
 
 export type RelativeFormData = z.infer<typeof relativeSchema>

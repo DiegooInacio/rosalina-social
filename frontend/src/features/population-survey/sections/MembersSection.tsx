@@ -27,7 +27,7 @@ export function MembersSection() {
   return (
     <FormSection title="Integrantes da família" description="Adicione cada pessoa uma vez, incluindo o responsável. Informe renda zero quando não houver renda; deixe vazia quando desconhecida.">
       <div className="space-y-5">
-        {(errors.members?.message || errors.members?.root?.message) && <p role="alert" className="text-sm text-red-600">{errors.members?.message ?? errors.members?.root?.message}</p>}
+        {(errors.members?.message || errors.members?.root?.message) && <p role="alert" data-form-error tabIndex={-1} className="text-sm text-red-600">{errors.members?.message ?? errors.members?.root?.message}</p>}
         {fields.length === 0 && <p className="text-sm text-slate-600">Nenhum integrante adicionado.</p>}
         {fields.map((field, index) => {
           const e = errors.members?.[index]
@@ -44,13 +44,13 @@ export function MembersSection() {
                 <Input id={`member-${field.id}-age`} label="Idade na data de referência" inputMode="numeric" placeholder="Calculada ao salvar se houver nascimento" error={e?.age?.message} {...register(`members.${index}.age`)} />
                 <Input id={`member-${field.id}-income`} label="Renda mensal (R$)" inputMode="decimal" placeholder="Ex.: 150,50" error={e?.income?.message} {...register(`members.${index}.income`)} />
                 <div>
-                  <Checkbox id={`member-${field.id}-isResponsible`} label="É o responsável familiar" {...responsibleRegistration} onChange={(event) => {
+                  <Checkbox id={`member-${field.id}-isResponsible`} label="É o responsável familiar" aria-invalid={Boolean(e?.isResponsible)} aria-describedby={e?.isResponsible ? `member-${field.id}-isResponsible-error` : undefined} {...responsibleRegistration} onChange={(event) => {
                     void responsibleRegistration.onChange(event)
                     if (event.target.checked) getValues('members').forEach((_, otherIndex) => {
                       if (otherIndex !== index) setValue(`members.${otherIndex}.isResponsible`, false, { shouldDirty: true })
                     })
                   }} />
-                  {e?.isResponsible?.message && <p role="alert" className="text-sm text-red-600">{e.isResponsible.message}</p>}
+                  {e?.isResponsible?.message && <p id={`member-${field.id}-isResponsible-error`} role="alert" className="text-sm text-red-600">{e.isResponsible.message}</p>}
                 </div>
               </div>
               <Button type="button" variant="secondary" className="mt-4" onClick={() => {

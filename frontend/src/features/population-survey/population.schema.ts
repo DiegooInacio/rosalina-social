@@ -1,15 +1,10 @@
 import { z } from 'zod'
-import { brDateToIso } from '../../lib/dates'
+import { brDateToIso, todayInFortaleza } from '../../lib/dates'
 import { blankToUndefined, optional } from '../../lib/forms'
 import { optionalCatalogId, optionalInteger, optionalMoney, toOptionalBoolean, toOptionalNumber, yesNoSchema } from '../../lib/form-fields'
 import { isValidCep, isValidCpf, isValidDate, isValidEmail, isValidPhone } from '../../lib/validators'
 
 export const states = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'] as const
-export function todayInFortaleza() {
-  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Fortaleza', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date())
-  const part = (type: string) => parts.find((item) => item.type === type)?.value
-  return `${part('day')}/${part('month')}/${part('year')}`
-}
 const text = (max: number) => z.string().trim().max(max, `Informe no máximo ${max} caracteres.`)
 const date = optional(isValidDate, 'Informe uma data válida (dd/mm/aaaa).')
 const phone = optional(isValidPhone, 'Informe um telefone válido com DDD.')
