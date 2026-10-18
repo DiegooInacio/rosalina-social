@@ -47,8 +47,8 @@ export function SocioeconomicSection() {
         <Select id="hasOtherAssets" label="Possui outros bens patrimoniais" placeholder="Não informado" options={yesNoOptions} error={fieldErrors?.hasOtherAssets?.message} {...assetRegistration} onChange={(event) => {
           void assetRegistration.onChange(event)
           if (event.target.value !== 'true') {
-            setValue('socioeconomic.hasOtherProperty', '', { shouldValidate: true })
-            setValue('socioeconomic.hasVehicle', '', { shouldValidate: true })
+            setValue('socioeconomic.hasOtherProperty', '', { shouldValidate: true, shouldDirty: true })
+            setValue('socioeconomic.hasVehicle', '', { shouldValidate: true, shouldDirty: true })
           }
         }} />
         {assets === 'true' && (['hasOtherProperty', 'hasVehicle'] as const).map((field) => (

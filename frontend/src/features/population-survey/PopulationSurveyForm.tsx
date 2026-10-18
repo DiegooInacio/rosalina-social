@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { FormProvider, useForm } from 'react-hook-form'
 import { Button } from '../../components/ui/Button'
+import { FormActions } from '../../components/ui/FormActions'
 import { FormFeedback, type FormMessage } from '../../components/ui/FormFeedback'
 import { ApiError } from '../../lib/api'
 import { mapApiFormErrors } from '../../lib/api-form-errors'
@@ -37,6 +38,7 @@ export function PopulationSurveyForm() {
         }
       }
       setMessage({ type: 'error', text: error instanceof ApiError ? error.message : 'Não foi possível salvar o levantamento. Tente novamente.' })
+
     }
   }
   return (
@@ -62,6 +64,12 @@ export function PopulationSurveyForm() {
           <p>Renda per capita: {savedSummary.perCapitaIncome === null ? 'Não informado' : savedSummary.perCapitaIncome.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
         </div>}
         <Button type="submit" disabled={methods.formState.isSubmitting}>{methods.formState.isSubmitting ? 'Salvando...' : 'Salvar levantamento'}</Button>
+          <FormActions isDirty={methods.formState.isDirty} isSubmitting={methods.formState.isSubmitting} submitLabel="Salvar levantamento" onClear={() => {
+            methods.reset(populationDefaultValues())
+            setMessage(null)
+            setSavedSummary(null)
+          }} />
+        </fieldset>
       </form>
     </FormProvider>
   )

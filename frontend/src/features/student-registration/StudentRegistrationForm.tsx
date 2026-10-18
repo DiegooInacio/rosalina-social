@@ -1,7 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { FormProvider, useForm } from 'react-hook-form'
+
 import { Button } from '../../components/ui/Button'
+import { FormActions } from '../../components/ui/FormActions'
 import { FormFeedback, type FormMessage } from '../../components/ui/FormFeedback'
 import { ApiError } from '../../lib/api'
 import { IdentificationSection } from './sections/IdentificationSection'
@@ -25,7 +27,7 @@ export function StudentRegistrationForm() {
     defaultValues: studentDefaultValues,
   })
   const {
-    formState: { isSubmitting, errors },
+    formState: { isSubmitting, isDirty, errors },
     handleSubmit,
     reset,
   } = methods
@@ -44,8 +46,8 @@ export function StudentRegistrationForm() {
         }
       }
       const text =
-        error instanceof ApiError && error.status === 400
-          ? `O servidor recusou os dados: ${error.message}`
+        error instanceof ApiError
+          ? `Não foi possível salvar o cadastro: ${error.message}`
           : 'Não foi possível salvar o cadastro. Tente novamente.'
       setSubmitMessage({ type: 'error', text })
     }
@@ -53,18 +55,22 @@ export function StudentRegistrationForm() {
 
   return (
     <FormProvider {...methods}>
-      <form className="mt-8 space-y-5" onSubmit={handleSubmit(onSubmit, () => {
+      <form className="mt-8" onSubmit={handleSubmit(onSubmit, () => {
         setSubmitMessage({ type: 'error', text: 'O cadastro não foi salvo. Revise os campos destacados e tente novamente.' })
-      })} noValidate>
-        <FormFeedback message={submitMessage} hasErrors={Object.keys(errors).length > 0} />
-        <IdentificationSection />
-        <FamilySection />
-        <ParentsRelationshipSection />
-        <SocioeconomicSection />
+      })} noValidate aria-busy={isSubmitting}>
+        <fieldset disabled={isSubmitting} className="min-w-0 space-y-5">
+          <legend className="sr-only">Cadastro de aluno</legend>
+          <FormFeedback message={submitMessage} hasErrors={Object.keys(errors).length > 0} />
+          <IdentificationSection />
+          <FamilySection />
+          <ParentsRelationshipSection />
+          <SocioeconomicSection />
 
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Salvando...' : 'Salvar cadastro'}
-        </Button>
+          <FormActions isDirty={isDirty} isSubmitting={isSubmitting} submitLabel="Salvar cadastro" onClear={() => {
+            reset(studentDefaultValues)
+            setSubmitMessage(null)
+          }} />
+        </fieldset>
       </form>
     </FormProvider>
   )

@@ -20,8 +20,8 @@ export function HousingSection() {
         <Select id="housing-type" label="Tipo de moradia" placeholder="Não informado" options={types} error={e?.type?.message} {...typeRegistration} onChange={(event) => {
           void typeRegistration.onChange(event)
           if (event.target.value !== 'ALUGADA') {
-            setValue('housing.landlordName', '', { shouldValidate: true })
-            setValue('housing.landlordPhone', '', { shouldValidate: true })
+            setValue('housing.landlordName', '', { shouldValidate: true, shouldDirty: true })
+            setValue('housing.landlordPhone', '', { shouldValidate: true, shouldDirty: true })
           }
         }} />
         {type === 'ALUGADA' && <>
