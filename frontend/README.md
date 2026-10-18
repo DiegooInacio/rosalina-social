@@ -94,3 +94,19 @@ correção de dados após falha, associação dos erros do servidor, bloqueio du
 o envio, sucesso, campos condicionais e confirmação de limpeza/cancelamento
 nos dois formulários. As chamadas da API são simuladas; os testes não gravam
 cadastros reais. Use `npm run test:watch` durante o desenvolvimento.
+
+## Meu perfil
+
+A rota privada `/app/perfil`, acessível em **Minha conta → Meu perfil**, permite consultar a conta, editar o nome e alterar a senha. E-mail e tipo de acesso são somente leitura, para administradores e operadores.
+
+O frontend está preparado para o contrato abaixo; **estas rotas ainda precisam ser implementadas no backend**:
+
+| Método | Rota | Corpo | Resposta |
+| --- | --- | --- | --- |
+| GET | `/api/v1/me` | — | `{ id, name, email, role }` |
+| PATCH | `/api/v1/me` | `{ name }` | Perfil atualizado no mesmo formato |
+| PUT | `/api/v1/me/password` | `{ currentPassword, newPassword }` | 204 sem corpo |
+
+Todas devem identificar o usuário pelo token e permitir ADMIN e OPERADOR. O nome deve ter de 1 a 150 caracteres após remover espaços nas extremidades; a nova senha, de 8 a 100 caracteres, sem remover espaços. O backend deve validar a senha atual e retornar 400 com `fields.currentPassword` quando incorreta (401 fica reservado à sessão inválida). Erros de validação seguem `{ message, fields }`.
+
+Enquanto a consulta não estiver disponível, a tela exibe somente o e-mail e a permissão presentes na sessão, com as alterações desabilitadas e opção de tentar novamente. Nenhum sucesso é simulado. As senhas e a confirmação não são armazenadas no navegador; a confirmação não é enviada à API.
