@@ -1,7 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { FormProvider, useForm } from 'react-hook-form'
+<<<<<<< Updated upstream
 import { Button } from '../../components/ui/Button'
+=======
+import { FormActions } from '../../components/ui/FormActions'
+import { FormFeedback, type FormMessage } from '../../components/ui/FormFeedback'
+>>>>>>> Stashed changes
 import { ApiError } from '../../lib/api'
 import { IdentificationSection } from './sections/IdentificationSection'
 import { FamilySection } from './sections/FamilySection'
@@ -25,7 +30,11 @@ export function StudentRegistrationForm() {
     defaultValues: studentDefaultValues,
   })
   const {
+<<<<<<< Updated upstream
     formState: { isSubmitting },
+=======
+    formState: { isSubmitting, isDirty, errors },
+>>>>>>> Stashed changes
     handleSubmit,
     reset,
   } = methods
@@ -46,8 +55,8 @@ export function StudentRegistrationForm() {
         }
       }
       const text =
-        error instanceof ApiError && error.status === 400
-          ? `O servidor recusou os dados: ${error.message}`
+        error instanceof ApiError
+          ? `Não foi possível salvar o cadastro: ${error.message}`
           : 'Não foi possível salvar o cadastro. Tente novamente.'
       setSubmitMessage({ type: 'error', text })
     }
@@ -55,6 +64,7 @@ export function StudentRegistrationForm() {
 
   return (
     <FormProvider {...methods}>
+<<<<<<< Updated upstream
       <form className="mt-8 space-y-5" onSubmit={handleSubmit(onSubmit)} noValidate>
         <IdentificationSection />
         <FamilySection />
@@ -77,6 +87,24 @@ export function StudentRegistrationForm() {
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? 'Salvando...' : 'Salvar cadastro'}
         </Button>
+=======
+      <form className="mt-8" onSubmit={handleSubmit(onSubmit, () => {
+        setSubmitMessage({ type: 'error', text: 'O cadastro não foi salvo. Revise os campos destacados e tente novamente.' })
+      })} noValidate aria-busy={isSubmitting}>
+        <fieldset disabled={isSubmitting} className="min-w-0 space-y-5">
+          <legend className="sr-only">Cadastro de aluno</legend>
+          <FormFeedback message={submitMessage} hasErrors={Object.keys(errors).length > 0} />
+          <IdentificationSection />
+          <FamilySection />
+          <ParentsRelationshipSection />
+          <SocioeconomicSection />
+
+          <FormActions isDirty={isDirty} isSubmitting={isSubmitting} submitLabel="Salvar cadastro" onClear={() => {
+            reset(studentDefaultValues)
+            setSubmitMessage(null)
+          }} />
+        </fieldset>
+>>>>>>> Stashed changes
       </form>
     </FormProvider>
   )
