@@ -26,8 +26,60 @@ npm run dev
   remove integrantes e apaga mensagens e erros.
 
 Os campos obrigatórios e as restrições seguem o contrato atual do backend.
-Não há salvamento de rascunhos nem edição de cadastros já concluídos nesta interface.
-A confirmação de descarte se aplica aos botões Limpar formulário e Cancelar.
+Há salvamento automático de rascunhos nos dois formulários. A edição de cadastros
+já concluídos ainda não está disponível nesta interface.
+
+## Rascunhos
+
+O frontend usa `/api/v1/form-drafts`; o backend precisa estar atualizado com a
+migration V6. Ao abrir um formulário, busca os rascunhos do usuário autenticado e
+oferece recuperar um deles ou começar outro, preservando os anteriores.
+
+- Alterações são enviadas após uma pausa de um segundo na digitação, sem exigir
+  que campos como CPF, data ou renda já estejam completos.
+- O indicador informa quando há alterações pendentes, salvamento em andamento,
+  sucesso ou falha. **Salvar rascunho agora** permite antecipar ou repetir o envio.
+- **Continuar depois** aguarda a confirmação do salvamento e retorna ao painel.
+- **Limpar formulário** e **Cancelar** pedem confirmação e descartam o rascunho
+  correspondente no servidor. Uma falha mantém o preenchimento na tela.
+- **Salvar cadastro/levantamento** sincroniza o rascunho e conclui por `/complete`,
+  usando o payload normalizado e as validações completas. Não cria um registro
+  por fora do fluxo de conclusão.
+
+Para cobrir um reload imediato, o estado ainda não confirmado pelo servidor fica
+temporariamente no `sessionStorage` da aba, separado por usuário e tipo de
+formulário. Essa cópia inclui dados pessoais e é removida quando o servidor
+confirma o salvamento. Não se usa `localStorage` para armazenar o preenchimento.
+A cópia temporária não é compartilhada entre dispositivos e é perdida ao fechar
+a aba; rascunhos já salvos no servidor continuam disponíveis após novo login.
+O navegador exibe aviso ao recarregar/fechar com alterações pendentes. Se a
+conexão voltar, o formulário tenta sincronizar novamente.
+
+Quando existe uma cópia pendente da aba, ela é recuperada primeiro para evitar
+substituí-la por outro rascunho. Em conflitos de versão (409), a interface mantém
+o conteúdo local e oferece carregar a versão do servidor com confirmação ou
+salvar uma cópia como outro rascunho. Nunca repete um PUT com uma versão mais nova
+sem resolver o conflito. Os envios de uma sessão são serializados.
+
+Se a resposta da conclusão se perder, o formulário bloqueia edição/descarte e
+oferece **Verificar conclusão**. Repete a mesma conclusão no mesmo rascunho,
+inclusive depois de reload, para obter o recibo sem duplicar o cadastro.
+
+## Atividades
+
+Administradores acessam **Atividades** pelo menu interno (`/app/atividades`).
+A tela permite cadastrar, buscar, renomear, ativar e desativar atividades.
+Desativar remove a opção dos novos cadastros sem excluir a atividade nem os
+vínculos com alunos já cadastrados. Nomes duplicados também são verificados
+entre as opções inativas, que podem ser reativadas.
+
+No cadastro de aluno, **Gerenciar atividades** abre essa área em outra aba.
+Após cadastrar ou alterar uma opção, use **Atualizar atividades** para recarregar
+a lista preservando os demais campos. Somente atividades ativas são oferecidas;
+se a seleção anterior foi desativada, será necessário selecionar outra atividade.
+
+A interface usa o perfil do token para mostrar os acessos de administração.
+As permissões das operações são verificadas pelo backend existente.
 
 ## Verificações
 

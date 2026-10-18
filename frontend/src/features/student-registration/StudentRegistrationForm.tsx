@@ -8,7 +8,9 @@ import { IdentificationSection } from './sections/IdentificationSection'
 import { FamilySection } from './sections/FamilySection'
 import { ParentsRelationshipSection } from './sections/ParentsRelationshipSection'
 import { SocioeconomicSection } from './sections/SocioeconomicSection'
-import { createStudent } from './student.api'
+import { DraftPanel } from '../drafts/DraftPanel'
+import { useFormDraft } from '../drafts/useFormDraft'
+import { restoreDraftValues } from '../drafts/draft-storage'
 import { mapStudentErrors } from './student-errors'
 import {
   studentDefaultValues,
@@ -16,6 +18,9 @@ import {
   toStudentRequest,
   type StudentFormData,
 } from './student.schema'
+
+const getDefaults = () => structuredClone(studentDefaultValues)
+const restore = (data: Record<string, unknown>) => restoreDraftValues(getDefaults(), data)
 
 export function StudentRegistrationForm() {
   const [submitMessage, setSubmitMessage] = useState<FormMessage | null>(null)
@@ -27,15 +32,14 @@ export function StudentRegistrationForm() {
   const {
     formState: { isSubmitting, isDirty, errors },
     handleSubmit,
-    reset,
   } = methods
+  const draft = useFormDraft('STUDENT', methods, getDefaults, restore)
 
   async function onSubmit(data: StudentFormData) {
     setSubmitMessage(null)
 
     try {
-      await createStudent(toStudentRequest(data))
-      reset(studentDefaultValues)
+      await draft.complete(toStudentRequest(data))
       setSubmitMessage({ type: 'success', text: 'Aluno cadastrado com sucesso.' })
     } catch (error) {
       if (error instanceof ApiError) {
@@ -53,10 +57,11 @@ export function StudentRegistrationForm() {
 
   return (
     <FormProvider {...methods}>
+      <DraftPanel draft={draft} onRetryComplete={() => void handleSubmit(onSubmit)()} />
       <form className="mt-8" onSubmit={handleSubmit(onSubmit, () => {
         setSubmitMessage({ type: 'error', text: 'O cadastro não foi salvo. Revise os campos destacados e tente novamente.' })
       })} noValidate aria-busy={isSubmitting}>
-        <fieldset disabled={isSubmitting} className="min-w-0 space-y-5">
+        <fieldset disabled={isSubmitting || !draft.canEdit} className="min-w-0 space-y-5">
           <legend className="sr-only">Cadastro de aluno</legend>
           <FormFeedback message={submitMessage} hasErrors={Object.keys(errors).length > 0} />
           <IdentificationSection />
@@ -64,9 +69,10 @@ export function StudentRegistrationForm() {
           <ParentsRelationshipSection />
           <SocioeconomicSection />
 
-          <FormActions isDirty={isDirty} isSubmitting={isSubmitting} submitLabel="Salvar cadastro" onClear={() => {
-            reset(studentDefaultValues)
-            setSubmitMessage(null)
+          <FormActions isDirty={isDirty || draft.hasDraft} isSubmitting={isSubmitting} disabled={!draft.canEdit} saveDisabled={!draft.canSubmit} onSaveDraft={draft.flush} submitLabel="Salvar cadastro" onClear={async () => {
+            const cleared = await draft.discard()
+            if (cleared) setSubmitMessage(null)
+            return cleared
           }} />
         </fieldset>
       </form>

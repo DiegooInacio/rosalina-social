@@ -1,7 +1,7 @@
 import { useFormContext, useWatch } from 'react-hook-form'
 import { FormSection } from '../../../components/ui/FormSection'
 import { Input } from '../../../components/ui/Input'
-import { Select } from '../../../components/ui/Select'
+import { RadioGroup } from '../../../components/ui/RadioGroup'
 import { yesNoOptions } from '../../../lib/form-fields'
 import type { PopulationFormData } from '../population.schema'
 
@@ -22,7 +22,7 @@ export function WorkAndBenefitsSection() {
           const registration = register(`workAndBenefits.${condition}`)
           return (
             <div key={condition} className="space-y-4">
-              <Select id={`work-${condition}`} label={label} placeholder="Não informado" options={yesNoOptions} error={e?.[condition]?.message} {...registration} onChange={(event) => {
+              <RadioGroup id={`work-${condition}`} label={label} options={yesNoOptions} error={e?.[condition]?.message} {...registration} onChange={(event) => {
                 void registration.onChange(event)
                 if (event.target.value !== 'true') setValue(`workAndBenefits.${detail}`, '', { shouldValidate: true, shouldDirty: true })
               }} />
@@ -30,7 +30,7 @@ export function WorkAndBenefitsSection() {
             </div>
           )
         })}
-        <Select id="minhaCasaMinhaVidaRegistered" label="Cadastro no Minha Casa, Minha Vida" placeholder="Não informado" options={yesNoOptions} error={e?.minhaCasaMinhaVidaRegistered?.message} {...register('workAndBenefits.minhaCasaMinhaVidaRegistered')} />
+        <RadioGroup id="minhaCasaMinhaVidaRegistered" label="Cadastro no Minha Casa, Minha Vida" options={yesNoOptions} error={e?.minhaCasaMinhaVidaRegistered?.message} {...register('workAndBenefits.minhaCasaMinhaVidaRegistered')} />
       </div>
     </FormSection>
   )

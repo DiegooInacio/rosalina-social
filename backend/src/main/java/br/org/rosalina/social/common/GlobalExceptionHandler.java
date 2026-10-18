@@ -21,6 +21,8 @@ import jakarta.servlet.http.HttpServletRequest; import org.springframework.http.
  }
  @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
  ResponseEntity<ErrorResponse> typeMismatch(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException e,HttpServletRequest r){return response(HttpStatus.BAD_REQUEST,"Parâmetro inválido.",Map.of(e.getName(),"Valor inválido."),r);}
+ @ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
+ ResponseEntity<ErrorResponse> missingParameter(org.springframework.web.bind.MissingServletRequestParameterException e,HttpServletRequest r){return response(HttpStatus.BAD_REQUEST,"Parâmetro obrigatório ausente.",Map.of(e.getParameterName(),"Informe este parâmetro."),r);}
  @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
  ResponseEntity<ErrorResponse> conflict(org.springframework.dao.DataIntegrityViolationException e,HttpServletRequest r){return response(HttpStatus.CONFLICT,"Dados conflitantes com um cadastro existente.",Map.of(),r);}
  @ExceptionHandler(Exception.class) ResponseEntity<ErrorResponse> other(Exception e,HttpServletRequest r){return response(HttpStatus.INTERNAL_SERVER_ERROR,"Erro interno.",Map.of(),r);}

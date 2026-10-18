@@ -4,6 +4,108 @@ A API usa `/api/v1`, autenticação `Authorization: Bearer <accessToken>` e JSON
 `ADMIN` e `OPERADOR` podem cadastrar, consultar e editar os dois formulários.
 Ambos podem consultar catálogos; somente `ADMIN` pode administrá-los e administrar usuários.
 
+## Rascunhos de formulários
+
+`/api/v1/form-drafts` atende alunos (`STUDENT`) e levantamento populacional
+(`POPULATION_SURVEY`). Rascunhos ficam em tabela separada: não aparecem nas
+listagens de cadastros, não reservam CPF e não criam integrantes ou familiares.
+Cada usuário, inclusive administrador, acessa somente os próprios rascunhos.
+É possível manter vários rascunhos de cada tipo.
+
+| Método | Endpoint | Resultado |
+|---|---|---|
+| POST | `/form-drafts` | 201 + Location; cria um rascunho |
+| GET | `/form-drafts?formType=STUDENT` | 200; lista somente os próprios rascunhos pendentes |
+| GET | `/form-drafts/{id}` | 200; recupera estado e versão |
+| PUT | `/form-drafts/{id}` | 200; substitui o estado completo, mediante versão atual |
+| DELETE | `/form-drafts/{id}?version=0` | 204; descarta um rascunho pendente |
+| POST | `/form-drafts/{id}/complete` | 200; valida e cria o cadastro definitivo |
+
+### Estado bruto e recuperação
+
+O campo `data` é um **objeto JSON** de até 256 KiB, e deve conter o estado bruto
+da interface, antes da transformação para o payload final. Preserva strings
+vazias, valores booleanos, arrays e campos pela metade, sem normalizar ou validar
+CPF, datas, dinheiro, UUIDs ou obrigatoriedade. Assim, um reload não depende de o
+usuário já ter terminado um campo. JSON inválido e valores fora de um objeto
+continuam sendo recusados. `title` é opcional e aceita até 150 caracteres.
+
+```json
+{
+  "formType": "STUDENT",
+  "title": "Cadastro de Ana em preenchimento",
+  "data": {
+    "name": "Ana",
+    "birthDate": "20/0",
+    "cpf": "529.",
+    "guardian": {"name": "Maria"},
+    "socioeconomic": {"householdIncome": "120,"}
+  }
+}
+```
+
+A resposta contém `id`, `formType`, `status: "DRAFT"`, `title`, `data`, `version`
+(inicialmente 0), `createdAt` e `updatedAt`. O frontend deve guardar o ID e a versão
+retornada. Para recuperar sem um ID local, pode listar os próprios rascunhos por
+tipo, selecionar um e buscar seu conteúdo em `GET /form-drafts/{id}`.
+A listagem é paginada, não inclui `data`, limita páginas a 100 itens e ordena por
+`updatedAt,desc` por padrão. Aceita ordenação por `id`, `title`, `formType`,
+`createdAt` e `updatedAt`.
+
+Um `PUT` envia `version`, `title` e `data` completos; campos omitidos de `data`
+não são mesclados com o conteúdo anterior. `formType` é fixado na criação.
+Toda atualização confirmada devolve uma versão incrementada. Exemplo:
+
+```json
+{"version": 0, "title": "Cadastro de Ana", "data": {"name": "Ana Silva"}}
+```
+
+Uma versão antiga retorna **409**, sem sobrescrever nem excluir dados. O frontend
+deve recuperar a versão atual e resolver o conflito, em vez de repetir a gravação
+automaticamente com outra versão. Isso vale para salvar, descartar e concluir.
+Rascunhos inexistentes ou pertencentes a outro usuário retornam **404**.
+
+### Conclusão e repetição segura
+
+Ao concluir, o frontend valida o formulário e transforma o estado bruto para o
+contrato final descrito nas seções abaixo. Envia esse payload em `submission`,
+junto da versão do rascunho:
+
+```json
+{
+  "version": 0,
+  "submission": {
+    "responsible": {"name": "Maria Silva"},
+    "authorizations": {"imageAndSound": false, "personalData": true}
+  }
+}
+```
+
+Esse exemplo conclui um rascunho `POPULATION_SURVEY`. Para `STUDENT`, `submission`
+deve respeitar `StudentRequest`, incluindo atividade, nascimento e responsável.
+As validações de formato, obrigatoriedade e negócio são as mesmas dos endpoints
+normais; o rascunho não serve para contorná-las. Erros de campos da conclusão
+usam os caminhos do payload final (por exemplo, `responsible.birthDate` ou
+`relatives[0].cpf`), sem o prefixo `submission.`. Erros do envelope usam `version`
+ou `submission`.
+
+Em caso de erro, o rascunho mantém o conteúdo e a versão. Se concluir com sucesso,
+a resposta contém `draftId`, `formType` e `recordId`. A criação do cadastro e a
+conclusão do rascunho ocorrem na mesma transação. O estado bruto e o título são
+apagados, e o rascunho deixa a lista de pendentes. É mantido um recibo com status
+`COMPLETED` e o ID do registro criado; `GET` passa a retornar `data: {}`.
+
+Repetir `/complete` de um rascunho já concluído, mesmo usando a versão enviada
+na primeira tentativa, retorna o mesmo `recordId`, sem duplicar o cadastro.
+O recibo não pode ser reaberto, sobrescrito ou descartado por `PUT`/`DELETE`.
+Operações simultâneas são serializadas por rascunho. A auditoria registra ações
+e identificadores, sem copiar o conteúdo pessoal de `data` ou `submission`.
+
+Na integração, o frontend deve serializar os envios de autosave e concluir
+pelo endpoint `/complete` (em vez de criar o cadastro por fora e tentar apagar o
+rascunho depois). Os endpoints existentes continuam disponíveis para criação
+direta; o frontend usa o fluxo de rascunhos descrito nesta seção.
+
 ## Alunos
 
 Endpoints existentes: `POST /students`, `GET /students`, `GET /students/{id}`,
@@ -176,7 +278,10 @@ a organização deve cadastrar as alternativas aprovadas. Escolaridade reutiliza
 `ESCOLARIDADE`; saneamento do aluno usa `AGUA`, `ESGOTO`, `COLETA_LIXO`, também
 administráveis. Não foram inventadas opções ausentes no documento.
 
-Flyway aplica V3 (opções conhecidas) e V4 (levantamentos/integrantes) sobre V1/V2.
+Flyway aplica V3 (opções conhecidas), V4 (levantamentos/integrantes), V5 (estrutura
+legada de status no levantamento) e V6 (rascunhos privados dos dois formulários)
+sobre V1/V2. O fluxo novo de rascunhos usa `form_draft`, sem flexibilizar as
+restrições das tabelas de cadastros concluídos.
 As seções do levantamento são armazenadas em JSONB tipado pelos DTOs; integrantes
 possuem linhas e UUIDs próprios. Nome/CPF do responsável têm colunas para consulta.
 Validações de catálogo das seções JSONB são realizadas pelo serviço.
@@ -197,6 +302,8 @@ Teste: `mvn -q test` em `backend`, com Java 21 e acesso ao Docker para Testconta
 Pessoa 1: aluno, validações/erros compartilhados, permissões, Swagger e V3.
 Pessoa 2: módulo population, regras de idade/renda/integrantes, auditoria e V4.
 
-Não há frontend novo, fluxo de rascunhos/conclusão, exclusão, PDF, consulta externa
-de CEP, assinatura em imagem ou histórico completo de valores anteriores.
-A interface deve preservar os dados preenchidos e confirmar ações de limpeza.
+O backend oferece o fluxo de rascunhos e conclusão descrito acima, integrado ao
+autosave do frontend. Não há exclusão de cadastros concluídos,
+PDF, consulta externa de CEP, assinatura em imagem ou histórico completo de
+valores anteriores. A interface deve preservar os dados preenchidos e confirmar
+ações de limpeza.

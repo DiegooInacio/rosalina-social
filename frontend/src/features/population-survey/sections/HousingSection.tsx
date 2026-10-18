@@ -3,6 +3,7 @@ import { FormSection } from '../../../components/ui/FormSection'
 import { Input } from '../../../components/ui/Input'
 import { MaskedInput } from '../../../components/ui/MaskedInput'
 import { Select } from '../../../components/ui/Select'
+import { RadioGroup } from '../../../components/ui/RadioGroup'
 import { yesNoOptions } from '../../../lib/form-fields'
 import type { PopulationFormData } from '../population.schema'
 
@@ -32,7 +33,7 @@ export function HousingSection() {
           <Input key={field} id={field} label={label} inputMode="numeric" error={e?.[field]?.message} {...register(`housing.${field}`)} />
         ))}
         {infrastructure.map(([field, label]) => (
-          <Select key={field} id={field} label={label} placeholder="Não informado" options={yesNoOptions} error={e?.[field]?.message} {...register(`housing.${field}`)} />
+          <RadioGroup key={field} id={field} label={label} options={yesNoOptions} error={e?.[field]?.message} {...register(`housing.${field}`)} />
         ))}
       </div>
     </FormSection>

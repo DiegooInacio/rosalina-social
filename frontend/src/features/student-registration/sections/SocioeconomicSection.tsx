@@ -2,7 +2,7 @@ import { useFormContext, useWatch } from 'react-hook-form'
 import { CatalogSelect } from '../../../components/ui/CatalogSelect'
 import { FormSection } from '../../../components/ui/FormSection'
 import { Input } from '../../../components/ui/Input'
-import { Select } from '../../../components/ui/Select'
+import { RadioGroup } from '../../../components/ui/RadioGroup'
 import { yesNoOptions } from '../../../lib/form-fields'
 import type { StudentFormData } from '../student.schema'
 
@@ -40,11 +40,11 @@ export function SocioeconomicSection() {
         {catalogs.map(([field, label, category]) => (
           <CatalogSelect key={field} id={field} label={label} category={category} error={fieldErrors?.[field]?.message} {...register(`socioeconomic.${field}`)} />
         ))}
-        <Select id="hasElectricity" label="Possui energia elétrica" placeholder="Não informado" options={yesNoOptions} error={fieldErrors?.hasElectricity?.message} {...register('socioeconomic.hasElectricity')} />
+        <RadioGroup id="hasElectricity" label="Possui energia elétrica" options={yesNoOptions} error={fieldErrors?.hasElectricity?.message} {...register('socioeconomic.hasElectricity')} />
         {expenses.map(([field, label]) => (
           <Input key={field} id={field} label={label} inputMode="decimal" placeholder="Ex.: 150,50" error={fieldErrors?.[field]?.message} {...register(`socioeconomic.${field}`)} />
         ))}
-        <Select id="hasOtherAssets" label="Possui outros bens patrimoniais" placeholder="Não informado" options={yesNoOptions} error={fieldErrors?.hasOtherAssets?.message} {...assetRegistration} onChange={(event) => {
+        <RadioGroup id="hasOtherAssets" label="Possui outros bens patrimoniais" options={yesNoOptions} error={fieldErrors?.hasOtherAssets?.message} {...assetRegistration} onChange={(event) => {
           void assetRegistration.onChange(event)
           if (event.target.value !== 'true') {
             setValue('socioeconomic.hasOtherProperty', '', { shouldValidate: true, shouldDirty: true })
@@ -52,10 +52,10 @@ export function SocioeconomicSection() {
           }
         }} />
         {assets === 'true' && (['hasOtherProperty', 'hasVehicle'] as const).map((field) => (
-          <Select key={field} id={field} label={field === 'hasVehicle' ? 'Possui veículo' : 'Possui outro imóvel'} placeholder="Não informado" options={yesNoOptions} error={fieldErrors?.[field]?.message} {...register(`socioeconomic.${field}`)} />
+          <RadioGroup key={field} id={field} label={field === 'hasVehicle' ? 'Possui veículo' : 'Possui outro imóvel'} options={yesNoOptions} error={fieldErrors?.[field]?.message} {...register(`socioeconomic.${field}`)} />
         ))}
         {benefits.map(([field, label]) => (
-          <Select key={field} id={field} label={label} placeholder="Não informado" options={yesNoOptions} error={fieldErrors?.[field]?.message} {...register(`socioeconomic.${field}`)} />
+          <RadioGroup key={field} id={field} label={label} options={yesNoOptions} error={fieldErrors?.[field]?.message} {...register(`socioeconomic.${field}`)} />
         ))}
       </div>
     </FormSection>

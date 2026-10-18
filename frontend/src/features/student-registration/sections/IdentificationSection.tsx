@@ -1,10 +1,13 @@
-import { useFormContext } from 'react-hook-form'
+import { useEffect } from 'react'
+import { Link } from 'react-router'
+import { useFormContext, useWatch } from 'react-hook-form'
 import { Checkbox } from '../../../components/ui/Checkbox'
 import { FormSection } from '../../../components/ui/FormSection'
 import { Input } from '../../../components/ui/Input'
 import { MaskedInput } from '../../../components/ui/MaskedInput'
 import { Select } from '../../../components/ui/Select'
 import { useCatalog } from '../../catalogs/useCatalog'
+import { getUserRole } from '../../../lib/auth'
 import type { StudentFormData } from '../student.schema'
 
 const statusOptions = [
@@ -14,10 +17,18 @@ const statusOptions = [
 
 export function IdentificationSection() {
   const {
-    formState: { errors },
+    formState: { errors, isSubmitted },
     register,
+    control,
+    setValue,
   } = useFormContext<StudentFormData>()
   const activities = useCatalog('ATIVIDADE')
+  const activityId = useWatch({ control, name: 'activityId' })
+  useEffect(() => {
+    if (!activities.isLoading && !activities.hasError && activityId && !activities.items.some((item) => item.id === activityId)) {
+      setValue('activityId', '', { shouldDirty: true, shouldValidate: isSubmitted })
+    }
+  }, [activities.isLoading, activities.hasError, activities.items, activityId, setValue, isSubmitted])
 
   const activityOptions = activities.items.map((item) => ({
     value: item.id,
@@ -42,15 +53,27 @@ export function IdentificationSection() {
           error={errors.status?.message}
           {...register('status')}
         />
-        <Select
-          id="activityId"
-          label="Atividade matriculada (obrigatória)"
-          aria-required="true"
-          options={activityOptions}
-          placeholder={activities.isLoading ? 'Carregando...' : 'Selecione a atividade'}
-          error={activityError}
-          {...register('activityId')}
-        />
+        <div>
+          <Select
+            id="activityId"
+            label="Atividade matriculada (obrigatória)"
+            aria-required="true"
+            options={activityOptions}
+            placeholder={activities.isLoading ? 'Carregando...' : activities.hasError ? 'Falha ao carregar atividades' : activities.items.length === 0 ? 'Nenhuma atividade disponível' : 'Selecione a atividade'}
+            disabled={activities.isLoading || activities.hasError}
+            error={activityError}
+            {...register('activityId')}
+          />
+          <div className="mt-1 flex flex-wrap items-center gap-x-4">
+            <button type="button" disabled={activities.isLoading} onClick={activities.reload} className="min-h-11 text-sm font-medium text-brand-700 underline underline-offset-4 disabled:opacity-60">
+              {activities.isLoading ? 'Atualizando...' : 'Atualizar atividades'}
+            </button>
+            {getUserRole() === 'ADMIN' && <Link to="/app/atividades" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-sm font-medium text-brand-700 underline underline-offset-4">
+              Gerenciar atividades <span className="sr-only">(abre em nova aba)</span>
+            </Link>}
+          </div>
+          {!activities.isLoading && !activities.hasError && activities.items.length === 0 && <p className="text-sm text-slate-600">{getUserRole() === 'ADMIN' ? 'Cadastre uma atividade e atualize a lista para selecioná-la.' : 'Peça a um administrador para cadastrar uma atividade.'}</p>}
+        </div>
 
         <div className="sm:col-span-2">
           <Input id="name" label="Nome (obrigatório)" aria-required="true" error={errors.name?.message} {...register('name')} />

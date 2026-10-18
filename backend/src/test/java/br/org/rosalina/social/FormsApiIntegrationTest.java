@@ -225,10 +225,11 @@ class FormsApiIntegrationTest {
     jdbc.update("insert into upgrade_test.catalog_item(category,name) values('OCUPACAO', 'CTPS')");
     jdbc.update("insert into upgrade_test.student(id,status,name,activity_id,birth_date,guardian_phone) values(?, 'ATIVO', 'Aluno existente', ?, '2015-05-20', '85999999999')", student, activity);
     var flyway = org.flywaydb.core.Flyway.configure().dataSource(dataSource).schemas("upgrade_test").defaultSchema("upgrade_test").load();
-    assertEquals(2, flyway.migrate().migrationsExecuted);
+    assertEquals(4, flyway.migrate().migrationsExecuted);
     assertEquals(0, flyway.migrate().migrationsExecuted);
     assertEquals("Aluno existente", jdbc.queryForObject("select name from upgrade_test.student where id = ?", String.class, student));
     assertEquals(1, jdbc.queryForObject("select count(*) from upgrade_test.catalog_item where category = 'OCUPACAO' and name = 'CTPS'", Integer.class));
     assertNotNull(jdbc.queryForObject("select to_regclass('upgrade_test.population_survey')", String.class));
+    assertNotNull(jdbc.queryForObject("select to_regclass('upgrade_test.form_draft')", String.class));
   }
 }

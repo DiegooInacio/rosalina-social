@@ -1,6 +1,6 @@
 import { useFormContext, useWatch } from 'react-hook-form'
 import { FormSection } from '../../../components/ui/FormSection'
-import { Select } from '../../../components/ui/Select'
+import { RadioGroup } from '../../../components/ui/RadioGroup'
 import { Textarea } from '../../../components/ui/Textarea'
 import { yesNoOptions } from '../../../lib/form-fields'
 import type { PopulationFormData } from '../population.schema'
@@ -22,7 +22,7 @@ export function HealthSection() {
           const registration = register(`health.${condition}`)
           return (
             <div key={condition} className="space-y-4">
-              <Select id={`health-${condition}`} label={label} placeholder="Não informado" options={yesNoOptions} error={e?.[condition]?.message} {...registration} onChange={(event) => {
+              <RadioGroup id={`health-${condition}`} label={label} options={yesNoOptions} error={e?.[condition]?.message} {...registration} onChange={(event) => {
                 void registration.onChange(event)
                 if (event.target.value !== 'true') setValue(`health.${detail}`, '', { shouldValidate: true, shouldDirty: true })
               }} />
@@ -30,7 +30,7 @@ export function HealthSection() {
             </div>
           )
         })}
-        <Select id="medicalCertificatePresented" label="Apresentou atestado médico" placeholder="Não informado" options={yesNoOptions} error={e?.medicalCertificatePresented?.message} {...register('health.medicalCertificatePresented')} />
+        <RadioGroup id="medicalCertificatePresented" label="Apresentou atestado médico" options={yesNoOptions} error={e?.medicalCertificatePresented?.message} {...register('health.medicalCertificatePresented')} />
         <Textarea id="allergies" label="Alergias" placeholder="Informe as alergias, se houver." error={e?.allergies?.message} {...register('health.allergies')} />
       </div>
     </FormSection>

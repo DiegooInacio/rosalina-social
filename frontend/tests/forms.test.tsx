@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -7,6 +7,7 @@ import { PopulationSurveyForm } from '../src/features/population-survey/Populati
 import { createStudent } from '../src/features/student-registration/student.api'
 import { createPopulationSurvey } from '../src/features/population-survey/population.api'
 import { ApiError } from '../src/lib/api'
+import type { FieldValues, UseFormReturn } from 'react-hook-form'
 
 const activityId = '00000000-0000-4000-8000-000000000001'
 vi.mock('../src/features/catalogs/useCatalog', () => ({
@@ -14,6 +15,22 @@ vi.mock('../src/features/catalogs/useCatalog', () => ({
 }))
 vi.mock('../src/features/student-registration/student.api', () => ({ createStudent: vi.fn() }))
 vi.mock('../src/features/population-survey/population.api', () => ({ createPopulationSurvey: vi.fn() }))
+// Estes testes isolam validação e ações do formulário. A sessão real de rascunho
+// é exercitada, com chamadas HTTP simuladas, em drafts.test.tsx.
+vi.mock('../src/features/drafts/useFormDraft', () => ({
+  useFormDraft: (type: string, methods: UseFormReturn<FieldValues>, defaults: () => FieldValues) => ({
+    phase: 'ready', saveState: 'idle', choices: [], hasLocal: false, hasDraft: false,
+    action: 'none', uncertain: false, error: '', canEdit: true, canSubmit: true,
+    flush: async () => true,
+    discard: async () => { methods.reset(defaults()); return true },
+    complete: async (submission: object) => {
+      if (type === 'STUDENT') await createStudent(submission as Parameters<typeof createStudent>[0])
+      else await createPopulationSurvey(submission as Parameters<typeof createPopulationSurvey>[0])
+      methods.reset(defaults())
+      return { draftId: 'draft', formType: type, recordId: 'saved' }
+    },
+  }),
+}))
 
 function showForm(kind: 'student' | 'population') {
   return render(<MemoryRouter initialEntries={['/form']}>
@@ -25,7 +42,14 @@ function showForm(kind: 'student' | 'population') {
 }
 
 function fill(label: string | RegExp, value: string) {
-  fireEvent.change(screen.getByLabelText(label), { target: { value } })
+  const group = screen.queryByRole('group', { name: label })
+  if (group) {
+    const radio = within(group).getAllByRole('radio').find((option) => (option as HTMLInputElement).value === value)
+    if (!radio) throw new Error(`Opção ${value} não encontrada.`)
+    fireEvent.click(radio)
+  } else {
+    fireEvent.change(screen.getByLabelText(label), { target: { value } })
+  }
 }
 
 function fillStudent() {
@@ -117,6 +141,7 @@ describe.each(['student', 'population'] as const)('RF15–RF18: %s', (kind) => {
     await userEvent.dblClick(screen.getByRole('button', { name: submitLabel }))
     expect(screen.getByRole('button', { name: 'Salvando...' }).matches(':disabled')).toBe(true)
     expect(screen.getByLabelText('Nome (obrigatório)').matches(':disabled')).toBe(true)
+    expect(screen.getAllByRole('radio').every((radio) => radio.matches(':disabled'))).toBe(true)
     expect(screen.getByRole('button', { name: 'Limpar formulário' }).matches(':disabled')).toBe(true)
     expect(screen.getByDisplayValue(kind === 'student' ? 'Aluno Teste' : 'Responsável Teste')).toBeTruthy()
     expect(kind === 'student' ? createStudent : createPopulationSurvey).toHaveBeenCalledOnce()
@@ -124,6 +149,7 @@ describe.each(['student', 'population'] as const)('RF15–RF18: %s', (kind) => {
     expect(await screen.findByRole('status')).toBeTruthy()
     expect((screen.getByLabelText('Nome (obrigatório)') as HTMLInputElement).value).toBe('')
     expect(screen.getByLabelText('Nome (obrigatório)').matches(':disabled')).toBe(false)
+    expect(screen.getAllByRole('radio').some((radio) => radio.matches(':disabled'))).toBe(false)
   })
 
   it('preserva o preenchimento em falha de rede e permite corrigir e reenviar', async () => {
@@ -211,12 +237,40 @@ it('limpa somente os detalhes de patrimônio dependentes da resposta alterada', 
   fill('Possui veículo', 'true')
   fill('Recebe Bolsa Família', 'true')
   fill('Possui outros bens patrimoniais', 'false')
-  expect(screen.queryByLabelText('Possui veículo')).toBeNull()
-  expect((screen.getByLabelText('Recebe Bolsa Família') as HTMLSelectElement).value).toBe('true')
+  expect(screen.queryByRole('group', { name: 'Possui veículo' })).toBeNull()
+  expect((within(screen.getByRole('group', { name: 'Recebe Bolsa Família' })).getByRole('radio', { name: 'Sim', checked: true }) as HTMLInputElement).value).toBe('true')
   vi.mocked(createStudent).mockResolvedValue({})
   await userEvent.click(screen.getByRole('button', { name: 'Salvar cadastro' }))
   expect(await screen.findByRole('status')).toBeTruthy()
   expect(vi.mocked(createStudent).mock.calls[0][0].socioeconomic).toMatchObject({
     hasOtherAssets: false, hasVehicle: undefined, hasOtherProperty: undefined, receivesBolsaFamilia: true,
   })
+})
+
+it('distingue Não de Não informado e mantém autorizações independentes nas opções visíveis', async () => {
+  showForm('population')
+  fill('Nome (obrigatório)', 'Responsável Teste')
+  const work = within(screen.getByRole('group', { name: 'Trabalha' }))
+  expect(work.getByRole('radio', { name: 'Não informado', checked: true })).toBeTruthy()
+  await userEvent.click(work.getByRole('radio', { name: 'Sim' }))
+  fill('Em que trabalha', 'Costura')
+  await userEvent.click(work.getByRole('radio', { name: 'Não' }))
+  expect(screen.queryByLabelText('Em que trabalha')).toBeNull()
+  await userEvent.click(within(screen.getByRole('group', { name: 'Uso de imagem e som' })).getByRole('radio', { name: 'Não autorizo' }))
+  expect(within(screen.getByRole('group', { name: 'Tratamento de dados pessoais' })).getByRole('radio', { name: 'Não informado', checked: true })).toBeTruthy()
+  await userEvent.click(within(screen.getByRole('group', { name: 'Tratamento de dados pessoais' })).getByRole('radio', { name: 'Autorizo' }))
+  vi.mocked(createPopulationSurvey).mockRejectedValue(new Error('Falha de rede'))
+  await userEvent.click(screen.getByRole('button', { name: 'Salvar levantamento' }))
+  expect(await screen.findByText(/Não foi possível salvar/)).toBeTruthy()
+  expect(vi.mocked(createPopulationSurvey).mock.calls[0][0].workAndBenefits?.works).toBe(false)
+  expect(vi.mocked(createPopulationSurvey).mock.calls[0][0].authorizations).toEqual({ imageAndSound: false, personalData: true })
+
+  await userEvent.click(work.getByRole('radio', { name: 'Não informado' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Salvar levantamento' }))
+  await waitFor(() => expect(createPopulationSurvey).toHaveBeenCalledTimes(2))
+  expect(vi.mocked(createPopulationSurvey).mock.calls[1][0].workAndBenefits).toBeUndefined()
+  vi.spyOn(window, 'confirm').mockReturnValue(true)
+  await userEvent.click(screen.getByRole('button', { name: 'Limpar formulário' }))
+  expect(work.getByRole('radio', { name: 'Não informado', checked: true })).toBeTruthy()
+  expect(within(screen.getByRole('group', { name: 'Uso de imagem e som' })).getByRole('radio', { name: 'Não informado', checked: true })).toBeTruthy()
 })

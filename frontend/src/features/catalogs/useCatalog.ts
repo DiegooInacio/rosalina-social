@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { fetchCatalog, type CatalogCategory, type CatalogItem } from './catalog.api'
 
 // Um "hook" é uma função que cuida de um assunto para o componente.
@@ -7,6 +7,12 @@ export function useCatalog(category: CatalogCategory) {
   const [items, setItems] = useState<CatalogItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
+  const [revision, setRevision] = useState(0)
+  const reload = useCallback(() => {
+    setIsLoading(true)
+    setHasError(false)
+    setRevision((value) => value + 1)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -26,7 +32,7 @@ export function useCatalog(category: CatalogCategory) {
     return () => {
       cancelled = true
     }
-  }, [category])
+  }, [category, revision])
 
-  return { items, isLoading, hasError }
+  return { items, isLoading, hasError, reload }
 }

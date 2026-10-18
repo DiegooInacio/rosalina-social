@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router'
+import { getUserRole } from '../../lib/auth'
 
 const links = [
   { to: '/app', label: 'Visão geral', end: true },
@@ -7,10 +8,13 @@ const links = [
 ]
 
 export function Sidebar() {
+  const visibleLinks = getUserRole() === 'ADMIN'
+    ? [...links, { to: '/app/atividades', label: 'Atividades' }]
+    : links
   return (
     <aside aria-label="Navegação da área interna">
       <nav className="flex gap-2 overflow-x-auto md:flex-col">
-        {links.map((link) => (
+        {visibleLinks.map((link) => (
           <NavLink
             key={link.to}
             to={link.to}
