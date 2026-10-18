@@ -1,6 +1,8 @@
 import { onlyDigits } from './masks'
+import { brDateToIso, todayInFortaleza } from './dates'
 
 export function isValidCpf(value: string) {
+  if (!/^[\d.\- /]+$/.test(value)) return false
   const digits = onlyDigits(value)
 
   if (digits.length !== 11) return false
@@ -36,6 +38,7 @@ export function isValidDate(value: string) {
 }
 
 export function isValidPhone(value: string) {
+  if (!/^[\d() +-]+$/.test(value)) return false
   const digits = onlyDigits(value)
 
   if (digits.length !== 10 && digits.length !== 11) return false
@@ -46,7 +49,15 @@ export function isValidPhone(value: string) {
 }
 
 export function isValidCep(value: string) {
-  return onlyDigits(value).length === 8
+  return /^\d{5}-?\d{3}$/.test(value)
+}
+
+export function isPastDate(value: string) {
+  return isValidDate(value) && brDateToIso(value) < brDateToIso(todayInFortaleza())
+}
+
+export function isPastOrPresentDate(value: string) {
+  return isValidDate(value) && brDateToIso(value) <= brDateToIso(todayInFortaleza())
 }
 
 export function isValidEmail(value: string) {

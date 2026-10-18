@@ -2,7 +2,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { FormProvider, useForm } from 'react-hook-form'
 import { Button } from '../../components/ui/Button'
+import { FormFeedback, type FormMessage } from '../../components/ui/FormFeedback'
 import { ApiError } from '../../lib/api'
+import { mapApiFormErrors } from '../../lib/api-form-errors'
 import { createPopulationSurvey } from './population.api'
 import { populationDefaultValues, populationSchema, toPopulationRequest, type PopulationFormData } from './population.schema'
 import { ResponsibleSection } from './sections/ResponsibleSection'
@@ -17,7 +19,7 @@ import { DeclarationSection } from './sections/DeclarationSection'
 import type { FinancialSummary } from './financial-summary'
 
 export function PopulationSurveyForm() {
-  const [message, setMessage] = useState<{ success: boolean; text: string } | null>(null)
+  const [message, setMessage] = useState<FormMessage | null>(null)
   const [savedSummary, setSavedSummary] = useState<FinancialSummary | null>(null)
   const methods = useForm<PopulationFormData>({ resolver: zodResolver(populationSchema), defaultValues: populationDefaultValues() })
   async function onSubmit(data: PopulationFormData) {
@@ -27,24 +29,23 @@ export function PopulationSurveyForm() {
       const saved = await createPopulationSurvey(toPopulationRequest(data))
       setSavedSummary(saved.financialSummary)
       methods.reset(populationDefaultValues())
-      setMessage({ success: true, text: 'Levantamento cadastrado com sucesso.' })
+      setMessage({ type: 'success', text: 'Levantamento cadastrado com sucesso.' })
     } catch (error) {
       if (error instanceof ApiError) {
-        for (const [field, text] of Object.entries(error.fields)) {
-          if (field === 'members') {
-            methods.setError('members', { message: text })
-          } else if (field === 'referenceDate' || ['responsible.', 'address.', 'housing.', 'workAndBenefits.', 'health.', 'members[', 'authorizations.', 'declaration.'].some((prefix) => field.startsWith(prefix))) {
-            const formField = field.replace(/\[(\d+)\]/g, '.$1')
-            methods.setError(formField as Parameters<typeof methods.setError>[0], { message: text })
-          }
+        for (const [field, text] of Object.entries(mapApiFormErrors(error.fields, data))) {
+          methods.setError(field as Parameters<typeof methods.setError>[0], { type: 'server', message: text })
         }
       }
-      setMessage({ success: false, text: error instanceof ApiError ? error.message : 'Não foi possível salvar o levantamento. Tente novamente.' })
+      setMessage({ type: 'error', text: error instanceof ApiError ? error.message : 'Não foi possível salvar o levantamento. Tente novamente.' })
     }
   }
   return (
     <FormProvider {...methods}>
-      <form className="mt-8 space-y-5" onSubmit={methods.handleSubmit(onSubmit)} noValidate>
+      <form className="mt-8 space-y-5" onSubmit={methods.handleSubmit(onSubmit, () => {
+        setMessage({ type: 'error', text: 'O levantamento não foi salvo. Revise os campos destacados e tente novamente.' })
+        setSavedSummary(null)
+      })} noValidate>
+        <FormFeedback message={message} hasErrors={Object.keys(methods.formState.errors).length > 0} />
         <ResponsibleSection />
         <AddressSection />
         <HousingSection />
@@ -54,7 +55,6 @@ export function PopulationSurveyForm() {
         <FinancialSummarySection />
         <AuthorizationsSection />
         <DeclarationSection />
-        {message && <p role="alert" className={`rounded-lg px-4 py-3 text-sm font-medium ${message.success ? 'bg-brand-100 text-brand-700' : 'bg-red-50 text-red-700'}`}>{message.text}</p>}
         {savedSummary && <div className="rounded-lg bg-brand-50 p-4 text-sm text-brand-700">
           <p className="font-semibold">Resumo financeiro do levantamento salvo</p>
           <p>Integrantes: {savedSummary.memberCount}</p>

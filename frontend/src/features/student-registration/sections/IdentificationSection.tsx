@@ -44,7 +44,8 @@ export function IdentificationSection() {
         />
         <Select
           id="activityId"
-          label="Atividade matriculada"
+          label="Atividade matriculada (obrigatória)"
+          aria-required="true"
           options={activityOptions}
           placeholder={activities.isLoading ? 'Carregando...' : 'Selecione a atividade'}
           error={activityError}
@@ -52,12 +53,13 @@ export function IdentificationSection() {
         />
 
         <div className="sm:col-span-2">
-          <Input id="name" label="Nome" error={errors.name?.message} {...register('name')} />
+          <Input id="name" label="Nome (obrigatório)" aria-required="true" error={errors.name?.message} {...register('name')} />
         </div>
 
         <MaskedInput
           id="birthDate"
-          label="Data de nascimento"
+          label="Data de nascimento (obrigatória)"
+          aria-required="true"
           mask="date"
           placeholder="dd/mm/aaaa"
           error={errors.birthDate?.message}
@@ -123,7 +125,8 @@ export function IdentificationSection() {
 
         <MaskedInput
           id="guardianPhone"
-          label="Telefone do responsável"
+          label="Telefone do responsável (obrigatório)"
+          aria-required="true"
           mask="phone"
           type="tel"
           error={errors.guardianPhone?.message}
