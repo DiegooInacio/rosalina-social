@@ -1,8 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { FormProvider, useForm } from 'react-hook-form'
-
-import { Button } from '../../components/ui/Button'
 import { FormActions } from '../../components/ui/FormActions'
 import { FormFeedback, type FormMessage } from '../../components/ui/FormFeedback'
 import { ApiError } from '../../lib/api'

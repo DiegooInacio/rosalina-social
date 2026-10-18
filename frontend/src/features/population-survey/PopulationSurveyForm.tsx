@@ -1,7 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { FormProvider, useForm } from 'react-hook-form'
-import { Button } from '../../components/ui/Button'
 import { FormActions } from '../../components/ui/FormActions'
 import { FormFeedback, type FormMessage } from '../../components/ui/FormFeedback'
 import { ApiError } from '../../lib/api'
@@ -37,33 +36,33 @@ export function PopulationSurveyForm() {
           methods.setError(field as Parameters<typeof methods.setError>[0], { type: 'server', message: text })
         }
       }
-      setMessage({ type: 'error', text: error instanceof ApiError ? error.message : 'Não foi possível salvar o levantamento. Tente novamente.' })
-
+      setMessage({ type: 'error', text: error instanceof ApiError ? `Não foi possível salvar o levantamento: ${error.message}` : 'Não foi possível salvar o levantamento. Tente novamente.' })
     }
   }
   return (
     <FormProvider {...methods}>
-      <form className="mt-8 space-y-5" onSubmit={methods.handleSubmit(onSubmit, () => {
+      <form className="mt-8" onSubmit={methods.handleSubmit(onSubmit, () => {
         setMessage({ type: 'error', text: 'O levantamento não foi salvo. Revise os campos destacados e tente novamente.' })
         setSavedSummary(null)
-      })} noValidate>
-        <FormFeedback message={message} hasErrors={Object.keys(methods.formState.errors).length > 0} />
-        <ResponsibleSection />
-        <AddressSection />
-        <HousingSection />
-        <WorkAndBenefitsSection />
-        <HealthSection />
-        <MembersSection />
-        <FinancialSummarySection />
-        <AuthorizationsSection />
-        <DeclarationSection />
-        {savedSummary && <div className="rounded-lg bg-brand-50 p-4 text-sm text-brand-700">
-          <p className="font-semibold">Resumo financeiro do levantamento salvo</p>
-          <p>Integrantes: {savedSummary.memberCount}</p>
-          <p>Total: {savedSummary.totalIncome === null ? 'Não informado' : savedSummary.totalIncome.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-          <p>Renda per capita: {savedSummary.perCapitaIncome === null ? 'Não informado' : savedSummary.perCapitaIncome.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-        </div>}
-        <Button type="submit" disabled={methods.formState.isSubmitting}>{methods.formState.isSubmitting ? 'Salvando...' : 'Salvar levantamento'}</Button>
+      })} noValidate aria-busy={methods.formState.isSubmitting}>
+        <fieldset disabled={methods.formState.isSubmitting} className="min-w-0 space-y-5">
+          <legend className="sr-only">Levantamento populacional</legend>
+          <FormFeedback message={message} hasErrors={Object.keys(methods.formState.errors).length > 0} />
+          <ResponsibleSection />
+          <AddressSection />
+          <HousingSection />
+          <WorkAndBenefitsSection />
+          <HealthSection />
+          <MembersSection />
+          <FinancialSummarySection />
+          <AuthorizationsSection />
+          <DeclarationSection />
+          {savedSummary && <div className="rounded-lg bg-brand-50 p-4 text-sm text-brand-700">
+            <p className="font-semibold">Resumo financeiro do levantamento salvo</p>
+            <p>Integrantes: {savedSummary.memberCount}</p>
+            <p>Total: {savedSummary.totalIncome === null ? 'Não informado' : savedSummary.totalIncome.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+            <p>Renda per capita: {savedSummary.perCapitaIncome === null ? 'Não informado' : savedSummary.perCapitaIncome.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+          </div>}
           <FormActions isDirty={methods.formState.isDirty} isSubmitting={methods.formState.isSubmitting} submitLabel="Salvar levantamento" onClear={() => {
             methods.reset(populationDefaultValues())
             setMessage(null)
