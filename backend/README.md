@@ -20,6 +20,31 @@ O backend oferece rascunhos privados para os dois formulários em
 descarte e conclusão transacional. O fluxo de integração está na seção
 [Rascunhos de formulários](FORMULARIOS.md#rascunhos-de-formulários).
 
+## Perfil do usuário
+
+As rotas abaixo atendem ADMIN e OPERADOR e identificam a conta exclusivamente
+pelo token de acesso, sem receber ID de usuário:
+
+| Método | Rota | Corpo | Resposta |
+| --- | --- | --- | --- |
+| GET | `/api/v1/me` | — | `{ id, name, email, role }` |
+| PATCH | `/api/v1/me` | `{ "name": "Maria Oliveira" }` | Perfil atualizado no mesmo formato |
+| PUT | `/api/v1/me/password` | `{ "currentPassword": "senha-atual", "newPassword": "nova-senha" }` | 204 sem corpo |
+
+O nome é salvo sem espaços nas extremidades, com 1 a 150 caracteres. E-mail,
+permissão e situação da conta não podem ser alterados por essas rotas.
+A senha atual é obrigatória; a nova deve ser diferente, ter de 8 a 100 caracteres
+e ocupar no máximo 72 bytes em UTF-8 (limite do BCrypt). Senhas não são aparadas.
+A confirmação da senha fica a cargo do frontend.
+
+Erros de validação retornam 400 no formato padrão `{ message, fields, ... }`.
+Senha atual incorreta retorna `fields.currentPassword`, sem invalidar a sessão.
+As alterações são transacionais e auditadas sem registrar nomes ou senhas nos
+eventos. A troca de senha passa a valer no próximo login; os tokens já emitidos
+continuam sujeitos à validade existente e à verificação de conta ativa.
+As rotas seguem a segurança atual da API: requisições sem autenticação válida
+ou de contas inativas recebem 403.
+
 ## Testes
 
 Com Java 21, Maven e Docker disponíveis, execute `mvn test`. Os testes de
