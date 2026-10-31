@@ -1,7 +1,8 @@
+import { populationAddressFields } from '../../../lib/cep-fields'
 import { useFormContext } from 'react-hook-form'
 import { FormSection } from '../../../components/ui/FormSection'
 import { Input } from '../../../components/ui/Input'
-import { MaskedInput } from '../../../components/ui/MaskedInput'
+import { ZipCodeInput } from '../../../components/ui/ZipCodeInput'
 import { Select } from '../../../components/ui/Select'
 import { states, type PopulationFormData } from '../population.schema'
 
@@ -11,7 +12,7 @@ export function AddressSection() {
   return (
     <FormSection title="Endereço" description="Endereço residencial da família. Campos opcionais.">
       <div className="grid gap-4 sm:grid-cols-2">
-        <MaskedInput id="address-zipCode" label="CEP" mask="cep" error={errors.address?.zipCode?.message} {...register('address.zipCode')} />
+        <ZipCodeInput id="address-zipCode" name="address.zipCode" addressFields={populationAddressFields} />
         {fields.map(([field, label]) => (
           <Input key={field} id={`address-${field}`} label={label} error={errors.address?.[field]?.message} {...register(`address.${field}`)} />
         ))}

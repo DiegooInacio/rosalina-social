@@ -19,17 +19,22 @@ public class SurveyValidation {
   private final CatalogValidation catalogs;
   public SurveyValidation(CatalogValidation catalogs) { this.catalogs = catalogs; }
 
-  public Request normalize(Request request, LocalDate existingDate) {
+  public Request normalize(Request request, LocalDate existingDate) { return normalize(request, existingDate, null); }
+
+  public Request normalize(Request request, LocalDate existingDate, Responsible existing) {
+    Set<java.util.UUID> retained = new HashSet<>();
+    if (existing != null) for (var id : new java.util.UUID[]{existing.birthSexId(), existing.racialIdentityId(), existing.genderIdentityId(), existing.sexualOrientationId(), existing.maritalStatusId(), existing.educationId(), existing.schoolTypeId()}) if (id != null) retained.add(id);
+    CatalogValidation options = catalogs.retaining(retained);
     LocalDate date = request.referenceDate() != null ? request.referenceDate() : existingDate != null ? existingDate : today();
     notFuture(date, "referenceDate");
     Responsible r = request.responsible();
-    catalogs.optional(r.birthSexId(), SEXO_NASCIMENTO, "responsible.birthSexId");
-    catalogs.optional(r.racialIdentityId(), IDENTIFICACAO_RACIAL, "responsible.racialIdentityId");
-    catalogs.optional(r.genderIdentityId(), GENERO, "responsible.genderIdentityId");
-    catalogs.optional(r.sexualOrientationId(), ORIENTACAO_SEXUAL, "responsible.sexualOrientationId");
-    catalogs.optional(r.maritalStatusId(), ESTADO_CIVIL, "responsible.maritalStatusId");
-    catalogs.optional(r.educationId(), ESCOLARIDADE, "responsible.educationId");
-    catalogs.optional(r.schoolTypeId(), TIPO_ESCOLA, "responsible.schoolTypeId");
+    options.optional(r.birthSexId(), SEXO_NASCIMENTO, "responsible.birthSexId");
+    options.optional(r.racialIdentityId(), IDENTIFICACAO_RACIAL, "responsible.racialIdentityId");
+    options.optional(r.genderIdentityId(), GENERO, "responsible.genderIdentityId");
+    options.optional(r.sexualOrientationId(), ORIENTACAO_SEXUAL, "responsible.sexualOrientationId");
+    options.optional(r.maritalStatusId(), ESTADO_CIVIL, "responsible.maritalStatusId");
+    options.optional(r.educationId(), ESCOLARIDADE, "responsible.educationId");
+    options.optional(r.schoolTypeId(), TIPO_ESCOLA, "responsible.schoolTypeId");
     if (r.documentType() == DocumentType.CPF) throw ApiException.field("responsible.documentType", "Use RG ou CIN; CPF possui campo próprio.");
     documentPair(r.documentType(), r.documentNumber(), "responsible");
     Responsible responsible = new Responsible(text(r.name()), age(r.age(), r.birthDate(), date, "responsible"),

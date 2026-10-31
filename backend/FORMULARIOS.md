@@ -112,8 +112,11 @@ Endpoints existentes: `POST /students`, `GET /students`, `GET /students/{id}`,
 `PUT /students/{id}` e `PATCH /students/{id}/status`.
 
 Obrigatórios: `status`, `name`, `activityId`, `birthDate`, `guardianPhone` e
-`relatives` com exatamente um item `RESPONSAVEL` com nome. Pai e mãe são opcionais;
-cada tipo pode aparecer uma vez. Cada familiar incluído precisa de `type` e `name`.
+`relatives` com pelo menos uma pessoa: mãe (`MAE`), pai (`PAI`) ou outro
+responsável (`RESPONSAVEL`). A prioridade é mãe → pai → responsável; outro
+responsável só é obrigatório quando não há mãe nem pai informados. Cada tipo
+pode aparecer uma vez e cada familiar incluído precisa de `type` e `name`.
+As respostas da API apresentam os familiares nessa ordem de prioridade.
 
 ```json
 {
@@ -126,7 +129,12 @@ cada tipo pode aparecer uma vez. Cada familiar incluído precisa de `type` e `na
 }
 ```
 
-As opções socioeconômicas e de ocupação/escolaridade são UUIDs de catálogo.
+Moradia, aquisição, vedação, piso e ocupação/escolaridade usam UUIDs de catálogo.
+Água, esgoto e coleta de lixo usam, respectivamente,
+`socioeconomic.hasWaterSupply`, `hasSewage` e `hasGarbageCollection`: booleanos
+opcionais, com `null`/omissão para não informado, `false` para Não e `true` para Sim.
+Os antigos IDs de saneamento continuam aceitos para compatibilidade e histórico;
+o frontend usa os booleanos para novos preenchimentos.
 Patrimônio: `hasOtherProperty: true` ou `hasVehicle: true` exige
 `socioeconomic.hasOtherAssets: true`. Benefícios são independentes.
 A listagem mantém a ocultação parcial do CPF; a consulta detalhada retorna o CPF normalizado.
@@ -275,12 +283,15 @@ Referências enviadas são verificadas quanto à categoria e à situação ativa
 Categorias adicionais: `SEXO_NASCIMENTO`, `IDENTIFICACAO_RACIAL`, `GENERO`,
 `ORIENTACAO_SEXUAL`, `ESTADO_CIVIL`, `TIPO_ESCOLA`. Elas começam sem opções:
 a organização deve cadastrar as alternativas aprovadas. Escolaridade reutiliza
-`ESCOLARIDADE`; saneamento do aluno usa `AGUA`, `ESGOTO`, `COLETA_LIXO`, também
-administráveis. Não foram inventadas opções ausentes no documento.
+`ESCOLARIDADE`. Saneamento do aluno usa respostas Sim/Não, sem depender de
+catálogos. As categorias legadas `AGUA`, `ESGOTO` e `COLETA_LIXO` são preservadas
+para referências históricas.
 
 Flyway aplica V3 (opções conhecidas), V4 (levantamentos/integrantes), V5 (estrutura
-legada de status no levantamento) e V6 (rascunhos privados dos dois formulários)
-sobre V1/V2. O fluxo novo de rascunhos usa `form_draft`, sem flexibilizar as
+legada de status no levantamento), V6 (rascunhos privados dos dois formulários)
+e V7 (booleanos de saneamento do aluno) sobre V1/V2. V7 preserva as referências
+antigas e converte somente respostas inequívocas Sim/Não; classificações
+anteriores não são interpretadas automaticamente. O fluxo novo de rascunhos usa `form_draft`, sem flexibilizar as
 restrições das tabelas de cadastros concluídos.
 As seções do levantamento são armazenadas em JSONB tipado pelos DTOs; integrantes
 possuem linhas e UUIDs próprios. Nome/CPF do responsável têm colunas para consulta.
@@ -307,3 +318,33 @@ autosave do frontend. Não há exclusão de cadastros concluídos,
 PDF, consulta externa de CEP, assinatura em imagem ou histórico completo de
 valores anteriores. A interface deve preservar os dados preenchidos e confirmar
 ações de limpeza.
+
+
+## Concorrência na edição de cadastros concluídos
+
+As respostas de criação, consulta e edição de alunos e levantamentos incluem
+`revision`, derivada de `updated_at`. Para `PUT /students/{id}` e
+`PUT /population-surveys/{id}`, envie `If-Match: "<revision>"` (com as aspas).
+A revisão é obrigatória: ausência retorna 428; versão diferente retorna 409 sem
+alterar o registro. A conferência usa bloqueio de escrita no cadastro dentro da
+mesma transação que aplica os dados. Alterações exclusivamente em familiares ou
+integrantes também avançam a revisão. A implementação usa a coluna existente,
+com precisão de microssegundos e incremento monotônico, sem nova migração.
+O cliente deve carregar a revisão por GET antes de editar e usar a nova revisão
+retornada após cada gravação.
+
+Na edição, referências de catálogo inativas já associadas ao cadastro podem ser
+mantidas. Novas seleções de opções inativas continuam rejeitadas. Valores nulos
+de CadÚnico e alfabetização significam ausência de informação, não uma resposta Não.
+
+
+## Repetição da criação de rascunhos
+
+`POST /form-drafts` aceita `requestId` opcional (UUID gerado pelo cliente).
+Ao repetir o pedido, envie o mesmo identificador. Enquanto o registro existir,
+a API retorna seu estado atual, inclusive se já concluído, sem substituir dados
+e sem duplicar o evento de criação. O identificador usa a chave primária
+existente; requisições concorrentes são resolvidas pela restrição única do banco.
+Um identificador de outra conta retorna 409 sem expor seus dados; reutilização
+entre tipos de formulário é rejeitada. Clientes antigos que omitem `requestId`
+continuam recebendo um UUID gerado pelo servidor.

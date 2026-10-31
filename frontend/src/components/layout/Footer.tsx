@@ -1,6 +1,6 @@
 export function Footer() {
   return (
-    <footer className="border-t border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-500">
+    <footer className="border-t border-line bg-surface px-4 py-6 text-center text-sm text-muted">
       Comunidade Rosalina
     </footer>
   )

@@ -1,7 +1,7 @@
-import { useFormContext, useWatch } from 'react-hook-form'
+import { Controller, useFormContext, useWatch } from 'react-hook-form'
 import { CatalogSelect } from '../../../components/ui/CatalogSelect'
 import { FormSection } from '../../../components/ui/FormSection'
-import { Input } from '../../../components/ui/Input'
+import { MoneyInput } from '../../../components/ui/MoneyInput'
 import { RadioGroup } from '../../../components/ui/RadioGroup'
 import { yesNoOptions } from '../../../lib/form-fields'
 import type { StudentFormData } from '../student.schema'
@@ -11,10 +11,8 @@ const catalogs = [
   ['acquisitionTypeId', 'Forma de aquisição', 'FORMA_AQUISICAO'],
   ['wallTypeId', 'Tipo de vedação', 'TIPO_VEDACAO'],
   ['floorTypeId', 'Tipo de piso', 'TIPO_PISO'],
-  ['waterSupplyId', 'Água', 'AGUA'],
-  ['sewageId', 'Esgoto', 'ESGOTO'],
-  ['garbageCollectionId', 'Coleta de lixo', 'COLETA_LIXO'],
 ] as const
+const sanitation = [['hasWaterSupply', 'Água'], ['hasSewage', 'Esgoto'], ['hasGarbageCollection', 'Coleta de lixo']] as const
 const expenses = [
   ['waterExpense', 'Gasto mensal com água (R$)'],
   ['electricityExpense', 'Gasto mensal com luz (R$)'],
@@ -40,9 +38,15 @@ export function SocioeconomicSection() {
         {catalogs.map(([field, label, category]) => (
           <CatalogSelect key={field} id={field} label={label} category={category} error={fieldErrors?.[field]?.message} {...register(`socioeconomic.${field}`)} />
         ))}
+        {sanitation.map(([field, label]) => (
+          <RadioGroup key={field} id={field} label={label} options={yesNoOptions} error={fieldErrors?.[field]?.message} {...register(`socioeconomic.${field}`)} />
+        ))}
         <RadioGroup id="hasElectricity" label="Possui energia elétrica" options={yesNoOptions} error={fieldErrors?.hasElectricity?.message} {...register('socioeconomic.hasElectricity')} />
         {expenses.map(([field, label]) => (
-          <Input key={field} id={field} label={label} inputMode="decimal" placeholder="Ex.: 150,50" error={fieldErrors?.[field]?.message} {...register(`socioeconomic.${field}`)} />
+          <Controller key={field} control={control} name={`socioeconomic.${field}`} render={({ field: input }) => (
+            <MoneyInput id={field} label={label} name={input.name} ref={input.ref} value={input.value}
+              onBlur={input.onBlur} onValueChange={input.onChange} error={fieldErrors?.[field]?.message} />
+          )} />
         ))}
         <RadioGroup id="hasOtherAssets" label="Possui outros bens patrimoniais" options={yesNoOptions} error={fieldErrors?.hasOtherAssets?.message} {...assetRegistration} onChange={(event) => {
           void assetRegistration.onChange(event)

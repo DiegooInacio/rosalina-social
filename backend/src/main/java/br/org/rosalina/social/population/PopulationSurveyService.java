@@ -34,12 +34,13 @@ public class PopulationSurveyService {
     return response(survey);
   }
 
-  public Response update(UUID id, Request request) {
-    PopulationSurvey survey = find(id);
-    Request normalized = validation.normalize(request, survey.referenceDate);
+  public Response update(UUID id, Request request, String revision) {
+    PopulationSurvey survey = surveys.findForUpdate(id).orElseThrow(() -> new NotFoundException("Levantamento não encontrado."));
+    br.org.rosalina.social.common.RecordRevision.requireMatch(revision, survey.updatedAt);
+    Request normalized = validation.normalize(request, survey.referenceDate, survey.data.responsible());
     apply(survey, normalized);
     // Touch parent even for member-only changes so updatedAt advances.
-    survey.updatedAt = java.time.Instant.now();
+    survey.updatedAt = br.org.rosalina.social.common.RecordRevision.next(survey.updatedAt);
     surveys.flush();
     audit.record("UPDATE", "POPULATION_SURVEY", id);
     return response(survey);
@@ -89,6 +90,6 @@ public class PopulationSurveyService {
     return new Response(survey.id, SurveyStatus.valueOf(survey.status), survey.referenceDate,
         d.responsible(), d.address(), d.housing(), d.workAndBenefits(),
         d.health(), members, d.authorizations(), d.declaration(), IncomeCalculator.calculate(members),
-        survey.createdBy, survey.createdAt, survey.updatedAt);
+        survey.createdBy, survey.createdAt, survey.updatedAt, survey.updatedAt.toString());
   }
 }

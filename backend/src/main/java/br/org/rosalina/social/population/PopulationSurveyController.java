@@ -27,7 +27,7 @@ public class PopulationSurveyController {
 
   @PutMapping("/{id}")
   @Operation(summary = "Substituir levantamento; integrantes omitidos são removidos")
-  public Response update(@PathVariable UUID id, @Valid @RequestBody Request request) { return service.update(id, request); }
+  public Response update(@PathVariable UUID id, @Valid @RequestBody Request request, @RequestHeader(value = "If-Match", required = false) String revision) { return service.update(id, request, revision); }
 
   @GetMapping("/{id}")
   public Response get(@PathVariable UUID id) { return service.get(id); }

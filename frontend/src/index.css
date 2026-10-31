@@ -11,18 +11,116 @@
   --color-accent-100: #fde8e1;
   --color-accent-500: #e8643f;  /* laranja da logo */
   --color-accent-600: #d14a26;
+
+  --color-canvas: #f8fafc;
+  --color-surface: #ffffff;
+  --color-subtle: #f1f5f9;
+  --color-foreground: #0f172a;
+  --color-body: #334155;
+  --color-secondary: #475569;
+  --color-muted: #64748b;
+  --color-placeholder: #64748b;
+  --color-line: #e2e8f0;
+  --color-line-soft: #f1f5f9;
+  --color-control: #7c8da4;
+  --color-link: #19632f;
+  --color-link-hover: #1f7a3a;
+  --color-success-soft: #f0faf3;
+  --color-success: #dbf3e2;
+  --color-success-line: #b8dfc5;
+  --color-selected: #1f7a3a;
+  --color-focus: #1f7a3a;
+  --color-control-accent: #1f7a3a;
+  --color-danger-soft: #fef2f2;
+  --color-danger-line: #fecaca;
+  --color-danger: #dc2626;
+  --color-danger-strong: #b91c1c;
+  --color-warning-soft: #fffbeb;
+  --color-warning: #78350f;
+  --color-warning-line: #fde68a;
+
 }
 
 @layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+    --color-canvas: #0b1220;
+    --color-surface: #121d2d;
+    --color-subtle: #1d2a3e;
+    --color-foreground: #f1f5f9;
+    --color-body: #d7e0ec;
+    --color-secondary: #bac7d8;
+    --color-muted: #9eafc5;
+    --color-placeholder: #93a5bd;
+    --color-line: #33445c;
+    --color-line-soft: #243248;
+    --color-control: #647995;
+    --color-link: #86e5a3;
+    --color-link-hover: #a6f3bb;
+    --color-success-soft: #102e22;
+    --color-success: #17432d;
+    --color-success-line: #2e6947;
+    --color-selected: #50c878;
+    --color-focus: #86e5a3;
+    --color-control-accent: #3fad64;
+    --color-danger-soft: #3a1722;
+    --color-danger-line: #853148;
+    --color-danger: #fb7185;
+    --color-danger-strong: #fda4af;
+    --color-warning-soft: #392b12;
+    --color-warning: #fcd577;
+    --color-warning-line: #88631f;
+  }
+
   body {
-    @apply min-w-80 bg-slate-50 text-slate-900 antialiased;
+    @apply min-w-80 bg-canvas text-foreground antialiased;
   }
 
   button,
   a,
   input,
   select,
+  textarea,
+  summary {
+    @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus;
+  }
+
+  button:enabled,
+  a[href],
+  summary,
+  select:enabled,
+  input[type='checkbox']:enabled,
+  input[type='radio']:enabled {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  input:disabled,
+  select:disabled,
+  textarea:disabled {
+    cursor: not-allowed;
+  }
+
+  input,
+  select,
   textarea {
-    @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600;
+    @apply transition-colors;
+    scroll-margin-block: 1.5rem;
+  }
+
+  [aria-invalid='true']:focus-visible {
+    @apply outline-danger;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition-duration: 0s !important;
+    }
   }
 }

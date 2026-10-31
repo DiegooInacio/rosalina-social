@@ -1,3 +1,4 @@
+import { useSessionToken } from '../auth/useSessionToken'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate } from 'react-router'
 import { Button } from '../../components/ui/Button'
@@ -10,6 +11,7 @@ import { getUserRole } from '../../lib/auth'
 import { createActivity, listCatalog, renameActivity, setActivityStatus, type CatalogItem } from '../catalogs/catalog.api'
 
 export function ActivitiesPage() {
+  useSessionToken()
   return getUserRole() === 'ADMIN' ? <ActivityManagement /> : <Navigate to="/app" replace />
 }
 
@@ -116,14 +118,14 @@ function ActivityManagement() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-950">Atividades</h1>
-        <p className="mt-2 text-slate-600">Organize as atividades oferecidas pela comunidade. As atividades ativas aparecem no cadastro de alunos.</p>
-        <Link to="/app/alunos/novo" className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-brand-700 underline underline-offset-4">Ir para cadastro de aluno</Link>
+        <h1 className="text-2xl font-bold text-foreground">Atividades</h1>
+        <p className="mt-2 text-secondary">Organize as atividades oferecidas pela comunidade. As atividades ativas aparecem no cadastro de alunos.</p>
+        <Link to="/app/alunos/novo" className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-link underline underline-offset-4">Ir para cadastro de aluno</Link>
       </div>
       <FormFeedback message={message} hasErrors={false} />
-      {isLoading ? <p role="status" className="rounded-xl border border-slate-200 bg-white p-6 text-slate-600">Carregando atividades...</p> : loadError ? (
-        <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-6">
-          <p className="text-sm text-red-700">Não foi possível carregar as atividades.</p>
+      {isLoading ? <p role="status" className="rounded-xl border border-line bg-surface p-6 text-secondary">Carregando atividades...</p> : loadError ? (
+        <div role="alert" className="rounded-xl border border-danger-line bg-danger-soft p-6">
+          <p className="text-sm text-danger-strong">Não foi possível carregar as atividades.</p>
           <Button type="button" variant="secondary" className="mt-3" onClick={() => {
             setIsLoading(true)
             setLoadError(false)
@@ -136,35 +138,35 @@ function ActivityManagement() {
             <fieldset disabled={busy !== null} className="flex min-w-0 flex-col items-start gap-4 sm:flex-row sm:items-end">
               <legend className="sr-only">Cadastrar atividade</legend>
               <div className="w-full flex-1"><Input ref={nameRef} id="activity-name" name="name" label="Nome da atividade (obrigatório)" aria-required="true" maxLength={150} placeholder="Ex.: Capoeira" value={name} error={nameError} onChange={(event) => { setName(event.target.value); setNameError('') }} /></div>
-              <Button type="submit" className="shrink-0">{busy === 'new' ? 'Cadastrando...' : 'Cadastrar atividade'}</Button>
+              <Button type="submit" className="shrink-0" loading={busy === 'new'}>{busy === 'new' ? 'Cadastrando...' : 'Cadastrar atividade'}</Button>
             </fieldset>
           </form>
         </FormSection>
         <FormSection title="Atividades cadastradas" description={`${activeCount} ${activeCount === 1 ? 'ativa' : 'ativas'} · ${items.length - activeCount} ${items.length - activeCount === 1 ? 'inativa' : 'inativas'}. Desativar mantém os vínculos existentes com alunos.`}>
-          {items.length === 0 ? <p className="text-sm text-slate-600">Nenhuma atividade cadastrada. Cadastre a primeira atividade no formulário acima.</p> : <>
+          {items.length === 0 ? <p className="text-sm text-secondary">Nenhuma atividade cadastrada. Cadastre a primeira atividade no formulário acima.</p> : <>
             <div className="mb-5 grid gap-4 sm:grid-cols-[1fr_12rem]">
               <Input id="activity-search" label="Buscar atividade" type="search" disabled={editing !== null} placeholder="Digite o nome da atividade" value={search} onChange={(event) => setSearch(event.target.value)} />
               <Select id="activity-status" label="Situação" disabled={editing !== null} placeholder="Todas" options={[{ value: 'active', label: 'Ativas' }, { value: 'inactive', label: 'Inativas' }]} value={status} onChange={(event) => setStatus(event.target.value)} />
             </div>
-            {visible.length === 0 ? <p role="status" className="py-4 text-sm text-slate-600">Nenhuma atividade encontrada para essa busca.</p> : <ul className="divide-y divide-slate-200" aria-label="Atividades cadastradas" aria-busy={busy !== null}>
+            {visible.length === 0 ? <p role="status" className="py-4 text-sm text-secondary">Nenhuma atividade encontrada para essa busca.</p> : <ul className="divide-y divide-line" aria-label="Atividades cadastradas" aria-busy={busy !== null}>
               {visible.map((item) => <li key={item.id} className="py-4 first:pt-0 last:pb-0">
                 {editing?.id === item.id ? <form onSubmit={saveEdit} noValidate aria-label={`Editar ${item.name}`}>
                   <fieldset disabled={busy !== null} className="min-w-0 space-y-3">
                     <legend className="sr-only">Editar atividade</legend>
                     <Input ref={editRef} autoFocus id={`activity-edit-${item.id}`} label="Nome da atividade" maxLength={150} value={editing.name} error={editing.error} onChange={(event) => setEditing({ ...editing, name: event.target.value, error: '' })} />
                     <div className="flex flex-wrap gap-2">
-                      <Button type="submit">{busy === item.id ? 'Salvando...' : 'Salvar nome'}</Button>
+                      <Button type="submit" loading={busy === item.id}>{busy === item.id ? 'Salvando...' : 'Salvar nome'}</Button>
                       <Button type="button" variant="secondary" onClick={() => setEditing(null)}>Cancelar edição</Button>
                     </div>
                   </fieldset>
                 </form> : <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
-                    <p className="break-words font-semibold text-slate-900">{item.name}</p>
-                    <span className={`mt-1 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${item.active ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-600'}`}>{item.active ? 'Ativa' : 'Inativa'}</span>
+                    <p className="break-words font-semibold text-foreground">{item.name}</p>
+                    <span className={`mt-1 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${item.active ? 'bg-success text-link' : 'bg-subtle text-secondary'}`}>{item.active ? 'Ativa' : 'Inativa'}</span>
                   </div>
                   <div className="flex shrink-0 flex-wrap gap-2">
                     <Button type="button" variant="secondary" disabled={busy !== null || editing !== null} aria-label={`Renomear ${item.name}`} onClick={() => { setEditing({ id: item.id, name: item.name, error: '' }); setMessage(null) }}>Renomear</Button>
-                    <Button type="button" variant="secondary" disabled={busy !== null || editing !== null} aria-label={`${item.active ? 'Desativar' : 'Ativar'} ${item.name}`} onClick={() => void toggleStatus(item)}>{busy === item.id ? 'Salvando...' : item.active ? 'Desativar' : 'Ativar'}</Button>
+                    <Button type="button" variant="secondary" disabled={busy !== null || editing !== null} loading={busy === item.id} aria-label={`${item.active ? 'Desativar' : 'Ativar'} ${item.name}`} onClick={() => void toggleStatus(item)}>{busy === item.id ? 'Salvando...' : item.active ? 'Desativar' : 'Ativar'}</Button>
                   </div>
                 </div>}
               </li>)}

@@ -40,6 +40,7 @@ export function formatDate(value: string) {
 }
 
 export const masks = {
+  digits: onlyDigits,
   cpf: formatCpf,
   cep: formatCep,
   phone: formatPhone,

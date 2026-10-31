@@ -2,6 +2,7 @@ import { getUserSubject } from '../../lib/auth'
 import type { FormType } from './drafts.api'
 
 export type PendingDraft = {
+  creationId?: string;
   id?: string; version?: number; data: Record<string, unknown>; updatedAt: string
   // Uma conclusão cuja resposta se perdeu deve repetir o mesmo pedido.
   submission?: Record<string, unknown>
@@ -17,6 +18,7 @@ export function readPending(key: string | null): PendingDraft | null {
     const value = key ? JSON.parse(sessionStorage.getItem(key) ?? 'null') : null
     if (!value || !value.data || typeof value.data !== 'object' || Array.isArray(value.data)) return null
     if (value.id !== undefined && (typeof value.id !== 'string' || !Number.isInteger(value.version) || value.version < 0)) return null
+    if (value.creationId !== undefined && (typeof value.creationId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value.creationId))) return null
     return value
   } catch { return null }
 }
@@ -34,6 +36,7 @@ export function writePending(key: string | null, value: PendingDraft | null) {
 // Tipos inesperados e propriedades desconhecidas não entram nos controles.
 export function restoreDraftValues<T>(defaults: T, data: Record<string, unknown>, arrayTemplates: Record<string, unknown> = {}): T {
   function merge(template: unknown, value: unknown, path: string): unknown {
+    if (template === null) return typeof value === 'boolean' ? value : null
     if (Array.isArray(template)) {
       const item = arrayTemplates[path]
       return Array.isArray(value) && item ? value.filter((entry) => entry && typeof entry === 'object' && !Array.isArray(entry)).map((entry) => merge(item, entry, path)) : []

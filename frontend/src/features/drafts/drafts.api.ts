@@ -10,11 +10,11 @@ export type FormDraft = DraftSummary & {
 export type DraftCompletion = { draftId: string; formType: FormType; recordId: string }
 
 export function listDrafts(formType: FormType) {
-  return apiRequest<{ content: DraftSummary[] }>('/api/v1/form-drafts?' + new URLSearchParams({ formType, size: '100' }))
+  return apiRequest<{ content: DraftSummary[] }>('/api/v1/form-drafts?' + new URLSearchParams({ formType, size: '100', sort: 'updatedAt,desc' }))
 }
 export const getDraft = (id: string) => apiRequest<FormDraft>(`/api/v1/form-drafts/${id}`)
-export function createDraft(formType: FormType, data: object, title: string) {
-  return apiRequest<FormDraft>('/api/v1/form-drafts', { method: 'POST', body: JSON.stringify({ formType, data, title }) })
+export function createDraft(formType: FormType, data: object, title: string, requestId: string) {
+  return apiRequest<FormDraft>('/api/v1/form-drafts', { method: 'POST', body: JSON.stringify({ requestId, formType, data, title }) })
 }
 export function updateDraft(draft: FormDraft, data: object, title: string) {
   return apiRequest<FormDraft>(`/api/v1/form-drafts/${draft.id}`, { method: 'PUT', body: JSON.stringify({ version: draft.version, data, title }) })

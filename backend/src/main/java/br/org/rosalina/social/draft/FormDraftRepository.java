@@ -8,6 +8,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 
 public interface FormDraftRepository extends JpaRepository<FormDraft, UUID> {
+  @Modifying
+  @Query(value = "insert into form_draft(id,owner_id,form_type,title,data) values(:id,:ownerId,:formType,:title,cast(:data as jsonb)) on conflict (id) do nothing", nativeQuery = true)
+  int createOnce(UUID id, UUID ownerId, String formType, String title, String data);
+
   Optional<FormDraft> findByIdAndOwnerId(UUID id, UUID ownerId);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)

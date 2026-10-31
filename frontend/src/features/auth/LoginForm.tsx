@@ -37,7 +37,7 @@ export function LoginForm() {
   }
 
   return (
-    <form className="space-y-5" onSubmit={handleSubmit(handleLogin)} noValidate>
+    <form className="space-y-5" onSubmit={handleSubmit(handleLogin)} aria-busy={isSubmitting} noValidate>
       <Input
         id="email"
         type="email"
@@ -55,11 +55,11 @@ export function LoginForm() {
         {...register('password')}
       />
       {errors.root && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-danger">
           {errors.root.message}
         </p>
       )}
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
+      <Button type="submit" className="w-full" loading={isSubmitting} disabled={isSubmitting}>
         {isSubmitting ? 'Entrando...' : 'Entrar'}
       </Button>
     </form>

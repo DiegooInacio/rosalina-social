@@ -1,9 +1,12 @@
+import { studentAddressFields } from '../../../lib/cep-fields'
+import { cpfHint, rgHint } from '../../../lib/document-hints'
 import { useEffect } from 'react'
 import { Link } from 'react-router'
-import { useFormContext, useWatch } from 'react-hook-form'
-import { Checkbox } from '../../../components/ui/Checkbox'
+import { Controller, useFormContext, useWatch } from 'react-hook-form'
+import { NullableBooleanSelect } from '../../../components/ui/NullableBooleanSelect'
 import { FormSection } from '../../../components/ui/FormSection'
 import { Input } from '../../../components/ui/Input'
+import { ZipCodeInput } from '../../../components/ui/ZipCodeInput'
 import { MaskedInput } from '../../../components/ui/MaskedInput'
 import { Select } from '../../../components/ui/Select'
 import { useCatalog } from '../../catalogs/useCatalog'
@@ -59,20 +62,21 @@ export function IdentificationSection() {
             label="Atividade matriculada (obrigatória)"
             aria-required="true"
             options={activityOptions}
+            value={activityId}
             placeholder={activities.isLoading ? 'Carregando...' : activities.hasError ? 'Falha ao carregar atividades' : activities.items.length === 0 ? 'Nenhuma atividade disponível' : 'Selecione a atividade'}
             disabled={activities.isLoading || activities.hasError}
             error={activityError}
             {...register('activityId')}
           />
           <div className="mt-1 flex flex-wrap items-center gap-x-4">
-            <button type="button" disabled={activities.isLoading} onClick={activities.reload} className="min-h-11 text-sm font-medium text-brand-700 underline underline-offset-4 disabled:opacity-60">
+            <button type="button" disabled={activities.isLoading} onClick={activities.reload} className="min-h-11 text-sm font-medium text-link underline underline-offset-4 disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed">
               {activities.isLoading ? 'Atualizando...' : 'Atualizar atividades'}
             </button>
-            {getUserRole() === 'ADMIN' && <Link to="/app/atividades" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-sm font-medium text-brand-700 underline underline-offset-4">
+            {getUserRole() === 'ADMIN' && <Link to="/app/atividades" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-sm font-medium text-link underline underline-offset-4">
               Gerenciar atividades <span className="sr-only">(abre em nova aba)</span>
             </Link>}
           </div>
-          {!activities.isLoading && !activities.hasError && activities.items.length === 0 && <p className="text-sm text-slate-600">{getUserRole() === 'ADMIN' ? 'Cadastre uma atividade e atualize a lista para selecioná-la.' : 'Peça a um administrador para cadastrar uma atividade.'}</p>}
+          {!activities.isLoading && !activities.hasError && activities.items.length === 0 && <p className="text-sm text-secondary">{getUserRole() === 'ADMIN' ? 'Cadastre uma atividade e atualize a lista para selecioná-la.' : 'Peça a um administrador para cadastrar uma atividade.'}</p>}
         </div>
 
         <div className="sm:col-span-2">
@@ -97,26 +101,31 @@ export function IdentificationSection() {
           {...register('startDate')}
         />
 
-        <Input id="rg" label="RG" error={errors.rg?.message} {...register('rg')} />
+        <Input id="rg" label="RG antigo (opcional)" hint={rgHint} error={errors.rg?.message} {...register('rg')} />
         <MaskedInput
           id="cpf"
-          label="CPF"
+          label="CPF" hint={cpfHint}
           mask="cpf"
           error={errors.cpf?.message}
           {...register('cpf')}
         />
-        <Input id="nis" label="NIS" error={errors.nis?.message} {...register('nis')} />
-        <Input
+        <MaskedInput id="nis" label="NIS" mask="digits" maxLength={20} error={errors.nis?.message} {...register('nis')} />
+        <MaskedInput
           id="nationalHealthCard"
           label="Cartão Nacional de Saúde"
+          mask="digits"
+          maxLength={20}
           error={errors.nationalHealthCard?.message}
           {...register('nationalHealthCard')}
         />
 
         <div className="sm:col-span-2">
-          <Checkbox id="cadunico" label="Possui Cadastro Único (CadÚnico)" {...register('cadunico')} />
+          <Controller control={control} name="cadunico" render={({ field }) => <NullableBooleanSelect {...field} id="cadunico" label="Possui Cadastro Único (CadÚnico)" />} />
         </div>
 
+        <div className="sm:col-span-2">
+          <ZipCodeInput id="zipCode" name="zipCode" addressFields={studentAddressFields} />
+        </div>
         <div className="sm:col-span-2">
           <Input
             id="address"
@@ -138,13 +147,6 @@ export function IdentificationSection() {
           {...register('referencePoint')}
         />
         <Input id="city" label="Cidade" error={errors.city?.message} {...register('city')} />
-        <MaskedInput
-          id="zipCode"
-          label="CEP"
-          mask="cep"
-          error={errors.zipCode?.message}
-          {...register('zipCode')}
-        />
 
         <MaskedInput
           id="guardianPhone"

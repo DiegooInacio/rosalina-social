@@ -1,14 +1,16 @@
 import { z } from 'zod'
+import { normalizeKinship } from '../student-registration/kinship'
 import { brDateToIso, todayInFortaleza } from '../../lib/dates'
-import { blankToUndefined, optional } from '../../lib/forms'
+import { blankToUndefined, optional, phoneField } from '../../lib/forms'
 import { optionalCatalogId, optionalInteger, optionalMoney, toOptionalBoolean, toOptionalNumber, yesNoSchema } from '../../lib/form-fields'
-import { isValidCep, isValidCpf, isValidDate, isValidEmail, isValidPhone } from '../../lib/validators'
+import { isValidCep, isValidCpf, isValidDate, isValidEmail } from '../../lib/validators'
 
 export const states = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'] as const
 const text = (max: number) => z.string().trim().max(max, `Informe no máximo ${max} caracteres.`)
 const date = optional(isValidDate, 'Informe uma data válida (dd/mm/aaaa).')
-const phone = optional(isValidPhone, 'Informe um telefone válido com DDD.')
+const phone = phoneField()
 export const memberSchema = z.object({
+  id: z.string().optional(),
   name: text(150).min(1, 'Informe o nome do integrante.'),
   documentType: z.enum(['', 'CPF', 'CIN']),
   documentNumber: text(30),
@@ -20,7 +22,7 @@ export const memberSchema = z.object({
 })
 export type MemberFormData = z.infer<typeof memberSchema>
 export const memberDefaultValues: MemberFormData = {
-  name: '', documentType: '', documentNumber: '', age: '', birthDate: '', kinship: '', income: '', isResponsible: false,
+  id: '', name: '', documentType: '', documentNumber: '', age: '', birthDate: '', kinship: '', income: '', isResponsible: false,
 }
 function ageAt(birth: string, reference: string) {
   return Number(reference.slice(0, 4)) - Number(birth.slice(0, 4)) - (reference.slice(5) < birth.slice(5) ? 1 : 0)
@@ -39,7 +41,7 @@ export const populationSchema = z.object({
     email: text(254).refine((value) => value === '' || isValidEmail(value), 'Informe um e-mail válido.'), voterRegistration: text(30),
   }),
   address: z.object({
-    street: text(255), number: text(30), zipCode: optional(isValidCep, 'Informe um CEP válido.'),
+    street: text(255), number: text(30), zipCode: optional(isValidCep, 'Informe um CEP com 8 dígitos. Ex.: 60744-390.'),
     city: text(120), state: z.enum(['', ...states]), neighborhood: text(120), complement: text(255),
   }),
   housing: z.object({
@@ -196,12 +198,13 @@ export function toPopulationRequest(data: PopulationFormData) {
       allergies: blankToUndefined(health.allergies),
     },
     members: data.members.map((member) => ({
+      id: member.id || undefined,
       name: member.name,
       documentType: member.documentType || undefined,
       documentNumber: blankToUndefined(member.documentNumber),
       age: toOptionalNumber(member.age),
       birthDate: member.birthDate ? brDateToIso(member.birthDate) : undefined,
-      kinship: blankToUndefined(member.kinship),
+      kinship: blankToUndefined(normalizeKinship(member.kinship)),
       income: toOptionalNumber(member.income),
       isResponsible: member.isResponsible,
     })),
