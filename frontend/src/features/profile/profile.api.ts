@@ -7,7 +7,7 @@ export type UserProfile = {
   role: 'ADMIN' | 'OPERADOR'
 }
 
-// Contrato previsto para o backend; veja a seção Meu perfil no README.
+// Rotas de perfil implementadas no backend; veja a seção Meu perfil no README.
 export const getProfile = (signal?: AbortSignal) => apiRequest<UserProfile>('/api/v1/me', { signal })
 export const updateProfile = (name: string) => apiRequest<UserProfile>('/api/v1/me', {
   method: 'PATCH', body: JSON.stringify({ name }),

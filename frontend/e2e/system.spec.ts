@@ -242,3 +242,28 @@ test('repete a criação após perder a resposta sem criar outro rascunho', asyn
   expect(keys).toHaveLength(2)
   expect(new Set(keys).size).toBe(1)
 })
+
+test('mantém consultas, perfil e tema funcionando após integrar as telas', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', (error) => errors.push(error.message))
+  await setup(page)
+  let profile = { id: 'profile-1', name: 'Maria Silva', email: 'admin@teste.local', role: 'ADMIN' }
+  await page.route('**/api/v1/me', async (route) => {
+    if (route.request().method() === 'PATCH') profile = { ...profile, ...route.request().postDataJSON() }
+    return route.fulfill({ json: profile })
+  })
+  await page.goto('/app/alunos')
+  await expect(page.getByRole('heading', { name: 'Alunos cadastrados' })).toBeVisible()
+  await page.getByRole('button', { name: /Minha conta/ }).click()
+  await page.getByRole('link', { name: 'Meu perfil' }).click()
+  await expect(page.getByRole('heading', { name: 'Meu perfil' })).toBeVisible()
+  await expect(page.getByLabel('Nome (obrigatório)', { exact: true })).toHaveValue('Maria Silva')
+  await page.getByLabel('Tema', { exact: true }).selectOption('dark')
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await page.getByLabel('Nome (obrigatório)', { exact: true }).fill('Maria Oliveira')
+  await page.getByRole('button', { name: 'Salvar nome' }).click()
+  await expect(page.getByText('Nome atualizado com sucesso.')).toBeVisible()
+  await page.getByRole('link', { name: 'Levantamentos cadastrados', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Levantamentos cadastrados' })).toBeVisible()
+  expect(errors).toEqual([])
+})

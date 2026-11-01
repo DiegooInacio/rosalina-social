@@ -1,10 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { Header } from '../src/components/layout/Header'
 import { ProfilePage } from '../src/features/profile/ProfilePage'
-import { getAccessToken, setTokens } from '../src/lib/auth'
+import { clearTokens, getAccessToken, setTokens } from '../src/lib/auth'
 
 const account = { id: 'user-1', name: 'Maria Silva', email: 'maria@example.com', role: 'OPERADOR' }
 const fetchMock = vi.fn<typeof fetch>()
@@ -139,4 +139,13 @@ it('abre o perfil pelo menu, fecha com Escape e encerra a sessão', async () => 
   await userEvent.click(screen.getByRole('button', { name: 'Sair' }))
   await waitFor(() => expect(screen.getByText('Login')).toBeTruthy())
   expect(getAccessToken()).toBeNull()
+})
+
+it('atualiza o cabeçalho quando a sessão é encerrada fora do menu', async () => {
+  render(<MemoryRouter><Header /></MemoryRouter>)
+  expect(screen.getByRole('combobox', { name: 'Tema' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: /Minha conta/ })).toBeTruthy()
+  await act(async () => { clearTokens() })
+  expect(screen.getByRole('link', { name: 'Entrar' })).toBeTruthy()
+  expect(screen.queryByRole('button', { name: /Minha conta/ })).toBeNull()
 })

@@ -84,7 +84,7 @@ function PasswordForm({ available }: { available: boolean }) {
             required: 'Confirme a nova senha.', validate: (value) => value === getValues('newPassword') || 'As senhas não coincidem.',
           })} />
       </div>
-      <label className="flex min-h-11 items-center gap-2 text-sm text-slate-700">
+      <label className="flex min-h-11 items-center gap-2 text-sm text-body">
         <input type="checkbox" checked={visible} onChange={(event) => setVisible(event.target.checked)} className="h-4 w-4 accent-brand-600" />
         Mostrar senhas
       </label>
@@ -116,12 +116,12 @@ export function ProfilePage() {
 
   return <div className="mx-auto max-w-3xl space-y-6">
     <div>
-      <p className="text-sm font-semibold text-brand-700">Minha conta</p>
-      <h1 className="mt-1 text-2xl font-bold text-slate-900">Meu perfil</h1>
-      <p className="mt-2 text-sm text-slate-600">Consulte seus dados e mantenha sua conta atualizada.</p>
+      <p className="text-sm font-semibold text-link">Minha conta</p>
+      <h1 className="mt-1 text-2xl font-bold text-foreground">Meu perfil</h1>
+      <p className="mt-2 text-sm text-secondary">Consulte seus dados e mantenha sua conta atualizada.</p>
     </div>
-    {loading && <p role="status" className="text-sm text-slate-600">Carregando perfil…</p>}
-    {error && <div role="alert" className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+    {loading && <p role="status" className="text-sm text-secondary">Carregando perfil…</p>}
+    {error && <div role="alert" className="space-y-3 rounded-xl border border-warning-line bg-warning-soft p-4 text-sm text-warning">
       <p>{error}</p>
       <Button variant="secondary" onClick={() => {
         setLoading(true)
@@ -131,8 +131,8 @@ export function ProfilePage() {
     </div>}
     <FormSection title="Dados da conta" description="O e-mail e o tipo de acesso são definidos pela administração.">
       <dl className="grid gap-4 sm:grid-cols-2">
-        <div><dt className="text-sm font-medium text-slate-500">E-mail</dt><dd className="mt-1 break-all text-slate-900">{email}</dd></div>
-        <div><dt className="text-sm font-medium text-slate-500">Tipo de acesso</dt><dd className="mt-1 text-slate-900">{role === 'ADMIN' ? 'Administrador' : role === 'OPERADOR' ? 'Operador' : 'Indisponível'}</dd></div>
+        <div><dt className="text-sm font-medium text-muted">E-mail</dt><dd className="mt-1 break-all text-foreground">{email}</dd></div>
+        <div><dt className="text-sm font-medium text-muted">Tipo de acesso</dt><dd className="mt-1 text-foreground">{role === 'ADMIN' ? 'Administrador' : role === 'OPERADOR' ? 'Operador' : 'Indisponível'}</dd></div>
       </dl>
     </FormSection>
     <FormSection title="Informações pessoais" description="Este é o nome usado para identificar sua conta.">

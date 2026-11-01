@@ -231,7 +231,7 @@ cadastros reais. Use `npm run test:watch` durante o desenvolvimento.
 
 A rota privada `/app/perfil`, acessível em **Minha conta → Meu perfil**, permite consultar a conta, editar o nome e alterar a senha. E-mail e tipo de acesso são somente leitura, para administradores e operadores.
 
-O frontend está preparado para o contrato abaixo; **estas rotas ainda precisam ser implementadas no backend**:
+O frontend usa as rotas de perfil já implementadas no backend:
 
 | Método | Rota | Corpo | Resposta |
 | --- | --- | --- | --- |
@@ -241,4 +241,40 @@ O frontend está preparado para o contrato abaixo; **estas rotas ainda precisam 
 
 Todas devem identificar o usuário pelo token e permitir ADMIN e OPERADOR. O nome deve ter de 1 a 150 caracteres após remover espaços nas extremidades; a nova senha, de 8 a 100 caracteres, sem remover espaços. O backend deve validar a senha atual e retornar 400 com `fields.currentPassword` quando incorreta (401 fica reservado à sessão inválida). Erros de validação seguem `{ message, fields }`.
 
-Enquanto a consulta não estiver disponível, a tela exibe somente o e-mail e a permissão presentes na sessão, com as alterações desabilitadas e opção de tentar novamente. Nenhum sucesso é simulado. As senhas e a confirmação não são armazenadas no navegador; a confirmação não é enviada à API.
+Se a consulta estiver indisponível, a tela exibe somente o e-mail e a permissão presentes na sessão, com as alterações desabilitadas e opção de tentar novamente. Nenhum sucesso é simulado. As senhas e a confirmação não são armazenadas no navegador; a confirmação não é enviada à API.
+
+## Testes em navegador real
+
+```bash
+npm install
+npx playwright install chromium
+npm run test:e2e
+```
+
+O Playwright inicia um servidor próprio na porta 4173 e executa Chromium em
+computador e celular. Cobre renovação da sessão administrativa, tema persistente,
+estabilidade do layout durante o autosave, restauração de rascunhos, máscaras,
+sincronização do responsável e edição por PUT com preservação de integrantes.
+Os testes usam respostas de API simuladas e não alteram o banco de desenvolvimento.
+Traços de falhas ficam em `test-results/`. Os testes de integração com PostgreSQL
+continuam no backend. O layout móvel limita a largura do menu para que ele role
+horizontalmente sem alargar a página inteira.
+
+
+## Troca de conta, conflitos e repetição da criação
+
+A área autenticada reinicia as telas quando muda o titular da sessão. A renovação
+de token da mesma conta mantém o formulário. Cada titular recupera apenas sua
+cópia local ao voltar a entrar.
+
+Conflitos na edição oferecem **Comparar minha cópia com os dados atuais**, com
+colunas de valores preservados e atuais e opção de mostrar todos os campos.
+A comparação é somente leitura e permite selecionar texto para copiar antes
+de descartar a edição local. Integrantes são associados pelos identificadores.
+
+A primeira gravação do rascunho envia `requestId` (UUID), preservado na aba até a
+criação ser confirmada. Falhas de rede e reload reutilizam esse identificador.
+A API retorna o rascunho já existente sem sobrescrever suas atualizações. Se o
+preenchimento mudou durante a falha, o frontend aplica os novos dados por PUT
+com a versão confirmada. Esta correção precisa das versões atuais do frontend
+e da API; usa a chave primária existente, sem migração adicional.

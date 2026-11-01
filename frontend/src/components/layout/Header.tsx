@@ -1,11 +1,12 @@
 import { useSessionToken } from '../../features/auth/useSessionToken'
 import { Link, useNavigate } from 'react-router'
 import { useEffect, useRef, useState } from 'react'
-import { clearTokens, getAccessToken, getUserSubject } from '../../lib/auth'
+import { clearTokens, getUserSubject } from '../../lib/auth'
+import { ThemeSelector } from '../../features/theme/ThemeSelector'
 
 export function Header() {
   const navigate = useNavigate()
-  const isLoggedIn = Boolean(getAccessToken())
+  const isLoggedIn = Boolean(useSessionToken())
   const [open, setOpen] = useState(false)
   const accountRef = useRef<HTMLDivElement>(null)
   const toggleRef = useRef<HTMLButtonElement>(null)
@@ -47,16 +48,16 @@ export function Header() {
             if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false)
           }}>
             <button ref={toggleRef} type="button" aria-expanded={open} aria-controls="account-navigation"
-              onClick={() => setOpen(!open)} className="flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
-              <span aria-hidden="true" className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-brand-700">
+              onClick={() => setOpen(!open)} className="flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-body hover:bg-subtle">
+              <span aria-hidden="true" className="flex h-8 w-8 items-center justify-center rounded-full bg-success text-link">
                 {getUserSubject()?.charAt(0).toUpperCase() || 'U'}
               </span>
               Minha conta <span aria-hidden="true">▾</span>
             </button>
-            {open && <nav id="account-navigation" aria-label="Minha conta" className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
-              <p className="break-all border-b border-slate-100 px-3 py-3 text-sm text-slate-500">{getUserSubject()}</p>
-              <Link to="/app/perfil" onClick={() => setOpen(false)} className="block rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100">Meu perfil</Link>
-              <button type="button" onClick={handleLogout} className="w-full rounded-lg px-3 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100">Sair</button>
+            {open && <nav id="account-navigation" aria-label="Minha conta" className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-line bg-surface p-2 shadow-lg">
+              <p className="break-all border-b border-line-soft px-3 py-3 text-sm text-muted">{getUserSubject()}</p>
+              <Link to="/app/perfil" onClick={() => setOpen(false)} className="block rounded-lg px-3 py-3 text-sm font-semibold text-body hover:bg-subtle">Meu perfil</Link>
+              <button type="button" onClick={handleLogout} className="w-full rounded-lg px-3 py-3 text-left text-sm font-semibold text-body hover:bg-subtle">Sair</button>
             </nav>}
           </div>
         ) : (
