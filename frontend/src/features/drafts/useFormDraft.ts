@@ -5,26 +5,27 @@ import { getUserSubject } from '../../lib/auth'
 import { completeDraft, createDraft, discardDraft, getDraft, listDrafts, updateDraft, type DraftCompletion, type DraftSummary, type FormDraft, type FormType } from './drafts.api'
 import { draftStorageKey, readPending, writePending, type PendingDraft } from './draft-storage'
 
-type Phase = 'loading' | 'choose' | 'ready' | 'load-error'
+type Phase = 'loading' | 'ready' | 'load-error'
 type SaveState = 'idle' | 'pending' | 'saving' | 'saved' | 'error' | 'conflict'
 type State = {
-  phase: Phase; saveState: SaveState; choices: DraftSummary[]; hasLocal: boolean
+  phase: Phase; saveState: SaveState; choices: DraftSummary[]; activeDraftId?: string
   hasDraft: boolean; action: 'none' | 'discard' | 'complete'; uncertain: boolean; error: string; savedAt?: string
 }
 
 export type FormDraftController = State & {
   canEdit: boolean; canSubmit: boolean
-  retryLoad: () => Promise<void>; resume: (id?: string) => Promise<void>; startNew: () => void
+  retryLoad: () => Promise<void>; resume: (id?: string) => Promise<void>
   flush: () => Promise<boolean>; discard: () => Promise<boolean>
   complete: (submission: object) => Promise<DraftCompletion>
+  retryCompletion: () => Promise<DraftCompletion>
   loadServer: () => Promise<void>; saveAsCopy: () => Promise<void>
 }
 
 export function useFormDraft<T extends FieldValues>(formType: FormType, methods: UseFormReturn<T>,
-  getDefaults: () => T, restore: (data: Record<string, unknown>) => T): FormDraftController {
-  const [state, setState] = useState<State>({ phase: 'loading', saveState: 'idle', choices: [], hasLocal: false, hasDraft: false, action: 'none', uncertain: false, error: '' })
+  getDefaults: () => T, restore: (data: Record<string, unknown>) => T, enabled = true): FormDraftController {
+  const [state, setState] = useState<State>({ phase: enabled ? 'loading' : 'ready', saveState: 'idle', choices: [], hasDraft: false, action: 'none', uncertain: false, error: '' })
   const session = useRef({
-    draft: null as FormDraft | null, latest: structuredClone(methods.getValues()),
+    draft: null as FormDraft | null, creationId: undefined as string | undefined, latest: structuredClone(methods.getValues()),
     ack: JSON.stringify(methods.getValues()), blocked: false, paused: false, suppress: false,
     submission: undefined as object | undefined, key: draftStorageKey(formType), owner: getUserSubject(),
     local: readPending(draftStorageKey(formType)), active: false, ready: false,
@@ -49,8 +50,9 @@ export function useFormDraft<T extends FieldValues>(formType: FormType, methods:
   function storePending() {
     const existing = readPending(session.key)
     if (!session.active && existing && JSON.stringify(existing.data) !== JSON.stringify(session.latest)) return
-    const pending = session.blocked || JSON.stringify(session.latest) !== session.ack || session.submission
+    const pending = session.blocked || JSON.stringify(session.latest) !== session.ack || session.submission || session.creationId
     const value: PendingDraft | null = pending ? {
+      creationId: session.creationId,
       id: session.draft?.id, version: session.draft?.version,
       data: session.latest, updatedAt: new Date().toISOString(),
       submission: session.submission as Record<string, unknown> | undefined,
@@ -66,7 +68,7 @@ export function useFormDraft<T extends FieldValues>(formType: FormType, methods:
     if (session.blocked) storePending()
     change({ saveState: session.blocked ? 'conflict' : 'error', error: session.blocked
       ? 'Este rascunho foi alterado ou concluído em outro lugar. Seu preenchimento foi preservado nesta aba.'
-      : error instanceof ApiError ? error.message : fallback })
+      : error instanceof ApiError ? `${fallback} ${error.message}` : fallback })
   }
   async function saveSnapshot(force = false) {
     assertOwner()
@@ -74,13 +76,24 @@ export function useFormDraft<T extends FieldValues>(formType: FormType, methods:
     if (session.submission) throw new Error('Confirme a conclusão anterior antes de continuar.')
     const snapshot = structuredClone(session.latest)
     const raw = JSON.stringify(snapshot)
-    if (raw === session.ack && (!force || session.draft)) return
+    if (raw === session.ack && (!force || session.draft) && !session.creationId) return
     change({ saveState: 'saving', error: '' })
     try {
-      session.draft = session.draft ? await updateDraft(session.draft, snapshot, title(snapshot)) : await createDraft(formType, snapshot, title(snapshot))
-      session.ack = raw
+      if (session.draft) {
+        session.draft = await updateDraft(session.draft, snapshot, title(snapshot))
+        session.ack = raw
+      } else {
+        session.creationId ??= crypto.randomUUID()
+        storePending()
+        session.draft = await createDraft(formType, snapshot, title(snapshot), session.creationId)
+        session.creationId = undefined
+        if (session.draft.status !== 'DRAFT') throw new ApiError('Este rascunho já foi concluído. Confira o cadastro antes de continuar.', 409)
+        // A resposta pode confirmar uma criação anterior cujo conteúdo já mudou.
+        session.ack = JSON.stringify(options.restore(session.draft.data))
+      }
       storePending()
-      change({ hasDraft: true, saveState: JSON.stringify(session.latest) === raw ? 'saved' : 'pending', savedAt: session.draft.updatedAt })
+      change({ hasDraft: true, activeDraftId: session.draft.id, saveState: JSON.stringify(session.latest) === session.ack ? 'saved' : 'pending', savedAt: session.draft.updatedAt })
+      if (JSON.stringify(session.latest) !== session.ack) schedule()
     } catch (error) { storePending(); failure(error); throw error }
   }
   function schedule() {
@@ -95,7 +108,9 @@ export function useFormDraft<T extends FieldValues>(formType: FormType, methods:
     session.suppress = false
   }
   function fresh() {
+    const previousId = session.draft?.id
     session.draft = null
+    session.creationId = undefined
     session.blocked = false
     session.submission = undefined
     session.ready = true
@@ -103,7 +118,8 @@ export function useFormDraft<T extends FieldValues>(formType: FormType, methods:
     session.ack = JSON.stringify(defaults)
     applyValues(defaults)
     storePending()
-    change({ phase: 'ready', saveState: 'idle', hasLocal: false, hasDraft: false, uncertain: false, error: '', savedAt: undefined })
+    change({ phase: 'ready', saveState: 'idle', activeDraftId: undefined, hasDraft: false, uncertain: false, error: '', savedAt: undefined })
+    if (session.active && previousId) setState((previous) => ({ ...previous, choices: previous.choices.filter((draft) => draft.id !== previousId) }))
   }
 
   async function load(isCancelled = () => false) {
@@ -113,19 +129,26 @@ export function useFormDraft<T extends FieldValues>(formType: FormType, methods:
       const result = await listDrafts(formType)
       if (isCancelled()) return
       session.local = readPending(session.key) ?? session.local
-      if (session.local || result.content.length) {
-        change({ phase: 'choose', choices: result.content, hasLocal: Boolean(session.local) })
-      } else fresh()
+      const choices = [...result.content].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+      change({ choices })
+      if (session.local) await resume(undefined, false, isCancelled)
+      else if (choices.length) await resume(choices[0].id, false, isCancelled)
+      else fresh()
     } catch (error) {
       if (!isCancelled()) change({ phase: 'load-error', error: error instanceof Error ? error.message : 'Não foi possível buscar os rascunhos.' })
     }
   }
 
-  async function resume(id?: string, replaceLocal = false) {
+  async function resume(id?: string, replaceLocal = false, isCancelled = () => false) {
     if (!replaceLocal && id && session.local && !window.confirm('Recuperar este rascunho do servidor? As alterações pendentes desta aba serão substituídas.')) return
+    cancelTimer()
+    session.ready = false
     change({ phase: 'loading', error: '' })
     try {
       assertOwner()
+      // Uma atualização já enviada deve terminar antes de trocar de rascunho.
+      await queue.current.catch(() => {})
+      if (isCancelled()) return
       const local = id === undefined ? session.local : null
       const draftId = id ?? local?.id
       let missing = false
@@ -133,9 +156,11 @@ export function useFormDraft<T extends FieldValues>(formType: FormType, methods:
         if (local && error instanceof ApiError && error.status === 404) { missing = true; return null }
         throw error
       }) : null
+      if (isCancelled()) return
       if (remote && remote.formType !== formType) throw new Error('Este rascunho pertence a outro formulário.')
       // Uma resposta perdida de conclusão precisa ser confirmada antes de criar outro cadastro.
       session.draft = remote
+      session.creationId = local?.creationId
       session.submission = local?.submission
       session.blocked = missing || Boolean(remote?.status === 'COMPLETED' && !session.submission)
       const remoteValues = remote?.status === 'DRAFT' ? options.restore(remote.data) : options.getDefaults()
@@ -149,14 +174,14 @@ export function useFormDraft<T extends FieldValues>(formType: FormType, methods:
       }
       session.ready = true
       storePending()
-      change({ phase: 'ready', hasLocal: false, hasDraft: Boolean(remote), uncertain: Boolean(session.submission),
+      change({ phase: 'ready', activeDraftId: remote?.id, hasDraft: Boolean(remote), uncertain: Boolean(session.submission),
         saveState: session.blocked ? 'conflict' : JSON.stringify(restored) === session.ack ? (remote ? 'saved' : 'idle') : 'pending',
         savedAt: remote?.updatedAt,
         error: session.blocked ? remote?.status === 'COMPLETED'
           ? 'Este rascunho já foi concluído em outra sessão. O preenchimento desta aba foi mantido. Salvar uma cópia iniciará outro cadastro.'
           : 'Há uma versão diferente no servidor. Escolha qual preenchimento continuar sem sobrescrever dados.' : '' })
       schedule()
-    } catch (error) { change({ phase: 'load-error', error: error instanceof Error ? error.message : 'Não foi possível recuperar o rascunho.' }) }
+    } catch (error) { if (!isCancelled()) change({ phase: 'load-error', error: error instanceof Error ? error.message : 'Não foi possível recuperar o rascunho.' }) }
   }
 
   async function flush() {
@@ -180,6 +205,10 @@ export function useFormDraft<T extends FieldValues>(formType: FormType, methods:
     try {
       await enqueue(async () => {
         assertOwner()
+        if (!session.draft && session.creationId) {
+          session.draft = await createDraft(formType, session.latest, title(session.latest), session.creationId)
+          session.creationId = undefined
+        }
         if (session.draft) {
           try { await discardDraft(session.draft) }
           catch (error) { if (!(error instanceof ApiError && error.status === 404)) throw error }
@@ -236,6 +265,7 @@ export function useFormDraft<T extends FieldValues>(formType: FormType, methods:
   async function saveAsCopy() {
     if (session.submission) return
     session.draft = null
+    session.creationId = undefined
     session.blocked = false
     session.ack = ''
     storePending()
@@ -243,9 +273,13 @@ export function useFormDraft<T extends FieldValues>(formType: FormType, methods:
   }
 
   useEffect(() => {
+    if (!enabled) return
     session.active = true
     let cancelled = false
-    void load(() => cancelled)
+    // Fast Refresh reexecuta os efeitos preservando refs e estado. Uma sessão
+    // já aberta deve apenas retomar a assinatura e o autosave, sem resetar o formulário.
+    if (!session.ready) void load(() => cancelled)
+    else schedule()
     const subscription = methods.watch(() => {
       if (session.suppress || !session.ready) return
       session.latest = structuredClone(methods.getValues())
@@ -274,6 +308,8 @@ export function useFormDraft<T extends FieldValues>(formType: FormType, methods:
   return { ...state,
     canEdit: state.phase === 'ready' && state.action === 'none' && !state.uncertain,
     canSubmit: state.phase === 'ready' && state.action === 'none' && !state.uncertain && state.saveState !== 'conflict',
-    retryLoad: () => load(), resume, startNew: () => { if (!session.local) fresh() }, flush, discard, complete, loadServer, saveAsCopy,
+    retryLoad: () => load(), resume, flush, discard, complete,
+    retryCompletion: () => session.submission ? complete(session.submission) : Promise.reject(new Error('Não há conclusão pendente para conferir.')),
+    loadServer, saveAsCopy,
   }
 }

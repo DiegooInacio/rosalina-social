@@ -1,12 +1,10 @@
 import { mapApiFormErrors } from '../../lib/api-form-errors'
-import { hasRelativeData } from './relative.schema'
+import { providedRelatives } from './relative.schema'
 import type { StudentFormData } from './student.schema'
 
 export function mapStudentErrors(fields: Record<string, string>, data: StudentFormData) {
-  // A API recebe uma lista sem os familiares opcionais vazios. A posição do
-  // responsável muda conforme pai e mãe tenham sido incluídos no envio.
-  const people = (['father', 'mother'] as const).filter((person) => hasRelativeData(data[person]))
-  const sentPeople = [...people, 'guardian'] as const
+  // Segue a mesma ordem e omissão de pessoas vazias usadas no envio.
+  const sentPeople = providedRelatives(data)
   const renamed: Record<string, string> = {}
   for (const [field, message] of Object.entries(fields)) {
     if (field === 'relatives') {

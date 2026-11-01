@@ -14,6 +14,7 @@ public final class DraftDtos {
 
   @Schema(name = "FormDraftCreateRequest")
   public record CreateRequest(
+      @Schema(description = "UUID gerado pelo cliente e reutilizado ao repetir a criação; retorna o mesmo rascunho sem sobrescrever dados.") UUID requestId,
       @NotNull FormType formType,
       @Size(max = 150) String title,
       @NotNull @Schema(description = "Estado bruto do formulário, inclusive campos incompletos. Objeto JSON de até 256 KiB.") ObjectNode data) {}

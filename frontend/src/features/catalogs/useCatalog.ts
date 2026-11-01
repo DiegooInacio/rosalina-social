@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
-import { fetchCatalog, type CatalogCategory, type CatalogItem } from './catalog.api'
+import { useCallback, useContext, useEffect, useState } from 'react'
+import { PreservedCatalogs } from './PreservedCatalogs'
+import { listCatalog, type CatalogCategory, type CatalogItem } from './catalog.api'
 
 // Um "hook" é uma função que cuida de um assunto para o componente.
 // Este busca as opções da API e informa se está carregando ou se deu erro.
 export function useCatalog(category: CatalogCategory) {
+  const retained = useContext(PreservedCatalogs)
   const [items, setItems] = useState<CatalogItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
@@ -17,9 +19,12 @@ export function useCatalog(category: CatalogCategory) {
   useEffect(() => {
     let cancelled = false
 
-    fetchCatalog(category)
+    listCatalog(category)
       .then((data) => {
-        if (!cancelled) setItems(data)
+        if (!cancelled) {
+          setItems(data.filter((item) => item.active || retained.has(item.id)).map((item) => item.active ? item : { ...item, name: `${item.name} (inativa)` }))
+          setHasError(false)
+        }
       })
       .catch(() => {
         if (!cancelled) setHasError(true)
@@ -32,7 +37,7 @@ export function useCatalog(category: CatalogCategory) {
     return () => {
       cancelled = true
     }
-  }, [category, revision])
+  }, [category, revision, retained])
 
   return { items, isLoading, hasError, reload }
 }

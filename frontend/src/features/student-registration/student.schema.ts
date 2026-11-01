@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { brDateToIso } from '../../lib/dates'
-import { blankToUndefined, optional } from '../../lib/forms'
+import { blankToUndefined, optional, phoneField } from '../../lib/forms'
 import { socioeconomicDefaultValues, socioeconomicSchema, toSocioeconomicRequest } from './socioeconomic.schema'
 import {
   isValidCep,
@@ -8,10 +8,12 @@ import {
   isPastDate,
   isPastOrPresentDate,
   isValidEmail,
-  isValidPhone,
 } from '../../lib/validators'
 import {
   hasRelativeData,
+  primaryRelative,
+  providedRelatives,
+  relativeTypes,
   relativeDefaultValues,
   relativeSchema,
   toRelativeRequest,
@@ -47,21 +49,18 @@ export const studentSchema = z
       .refine(isPastDate, 'Informe uma data de nascimento válida e anterior a hoje.'),
     rg: z.string().trim().max(30, 'Informe no máximo 30 caracteres.'),
     cpf: optional(isValidCpf, 'Informe um CPF válido.'),
-    cadunico: z.boolean(),
+    cadunico: z.boolean().nullable(),
     nis: z.string().trim().regex(/^$|^\d{1,20}$/, 'Informe até 20 dígitos para o NIS.'),
     nationalHealthCard: z.string().trim().regex(/^$|^\d{1,20}$/, 'Informe até 20 dígitos para o Cartão Nacional de Saúde.'),
     address: z.string().trim().max(255, 'Informe no máximo 255 caracteres.'),
     neighborhood: z.string().trim().max(120, 'Informe no máximo 120 caracteres.'),
     referencePoint: z.string().trim().max(255, 'Informe no máximo 255 caracteres.'),
     city: z.string().trim().max(120, 'Informe no máximo 120 caracteres.'),
-    zipCode: optional(isValidCep, 'Informe um CEP válido.'),
+    zipCode: optional(isValidCep, 'Informe um CEP com 8 dígitos. Ex.: 60744-390.'),
     startDate: optional(isPastOrPresentDate, 'Informe uma data de início válida, até hoje.'),
-    guardianPhone: z
-      .string()
-      .min(1, 'Informe o telefone do responsável.')
-      .refine(isValidPhone, 'Informe um telefone válido com DDD.'),
+    guardianPhone: phoneField('Informe o telefone do responsável.'),
     guardianEmail: optionalEmail,
-    studentPhone: optional(isValidPhone, 'Informe um telefone válido com DDD.'),
+    studentPhone: phoneField(),
     studentEmail: optionalEmail,
     parentsRelationshipStatus: z.enum(['', ...parentsRelationshipStatuses], {
       error: 'Selecione uma situação dos pais válida.',
@@ -72,8 +71,8 @@ export const studentSchema = z
     socioeconomic: socioeconomicSchema,
   })
   .superRefine((data, ctx) => {
-    // O backend exige o nome do responsável
-    if (data.guardian.name.trim() === '') {
+    // Sem mãe ou pai, exige outro responsável. Pessoas parcialmente preenchidas precisam de nome.
+    if (!primaryRelative(data) || (hasRelativeData(data.guardian) && data.guardian.name.trim() === '')) {
       ctx.addIssue({
         code: 'custom',
         message: 'Informe o nome do responsável.',
@@ -107,7 +106,7 @@ export const studentDefaultValues: StudentFormData = {
   birthDate: '',
   rg: '',
   cpf: '',
-  cadunico: false,
+  cadunico: null,
   nis: '',
   nationalHealthCard: '',
   address: '',
@@ -129,16 +128,7 @@ export const studentDefaultValues: StudentFormData = {
 
 // Transforma os dados do formulário no formato que a API espera
 export function toStudentRequest(data: StudentFormData) {
-  // Pai e mãe só vão no envio se algo foi preenchido
-  const relatives = [
-    { type: 'PAI' as const, person: data.father },
-    { type: 'MAE' as const, person: data.mother },
-  ]
-    .filter(({ person }) => hasRelativeData(person))
-    .map(({ type, person }) => toRelativeRequest(type, person))
-
-  // O responsável sempre vai
-  relatives.push(toRelativeRequest('RESPONSAVEL', data.guardian))
+  const relatives = providedRelatives(data).map((person) => toRelativeRequest(relativeTypes[person], data[person]))
 
   return {
     status: data.status,

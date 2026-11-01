@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router'
 import { Button } from './Button'
+import { ClearFormButton } from './ClearFormButton'
 
 type Props = {
   isDirty: boolean
@@ -19,13 +20,11 @@ export function FormActions({ isDirty, isSubmitting, onClear, onSaveDraft, disab
 
   return (
     <div className="flex flex-wrap gap-3">
-      <Button type="submit" disabled={isSubmitting || disabled || saveDisabled}>{isSubmitting ? 'Salvando...' : submitLabel}</Button>
+      <Button type="submit" loading={isSubmitting} disabled={isSubmitting || disabled || saveDisabled}>{isSubmitting ? 'Salvando...' : submitLabel}</Button>
       <Button type="button" variant="secondary" disabled={isSubmitting || disabled || saveDisabled} onClick={async () => {
         if (await onSaveDraft()) navigate('/app')
       }}>Continuar depois</Button>
-      <Button type="button" variant="secondary" disabled={isSubmitting || disabled} onClick={async () => {
-        if (confirmDiscard('Limpar o formulário?')) await onClear()
-      }}>Limpar formulário</Button>
+      <ClearFormButton hasData={isDirty} disabled={isSubmitting || disabled} onClear={onClear} />
       <Button type="button" variant="secondary" disabled={isSubmitting || disabled} onClick={async () => {
         if (confirmDiscard('Cancelar o preenchimento?') && await onClear()) navigate('/app')
       }}>Cancelar</Button>

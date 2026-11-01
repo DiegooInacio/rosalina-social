@@ -16,17 +16,29 @@ const forms = [
 export function DashboardPage() {
   return (
     <div>
-      <h1 className="text-2xl font-bold text-slate-950">Formulários</h1>
-      <p className="mt-2 text-slate-600">Selecione o cadastro que deseja iniciar.</p>
-      <div className="mt-8 grid gap-4 lg:grid-cols-2">
+      <h1 className="text-2xl font-bold text-foreground">Visão geral</h1>
+      <p className="mt-2 text-secondary">Consulte os dados já cadastrados ou inicie um novo preenchimento.</p>
+      <section className="mt-8" aria-labelledby="consultas-title">
+        <h2 id="consultas-title" className="text-lg font-semibold text-foreground">Consultar cadastros</h2>
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          {[
+            { to: '/app/alunos', title: 'Alunos cadastrados', description: 'Busque por nome, CPF ou situação e consulte a ficha completa do aluno.' },
+            { to: '/app/levantamentos', title: 'Levantamentos cadastrados', description: 'Consulte famílias, moradia, saúde, integrantes e o resumo financeiro.' },
+          ].map((item) => <Link key={item.to} to={item.to} className="rounded-xl border border-line bg-surface p-6 shadow-sm transition hover:border-brand-500 hover:shadow-md focus-visible:border-brand-500 focus-visible:shadow-md">
+            <h3 className="font-semibold text-link">{item.title}</h3><p className="mt-2 text-sm leading-6 text-secondary">{item.description}</p>
+          </Link>)}
+        </div>
+      </section>
+      <h2 className="mt-8 text-lg font-semibold text-foreground">Novo preenchimento</h2>
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
         {forms.map((form) => (
           <Link
             key={form.to}
             to={form.to}
-            className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-brand-500 hover:shadow-md"
+            className="rounded-xl border border-line bg-surface p-6 shadow-sm transition hover:border-brand-500 hover:shadow-md focus-visible:border-brand-500 focus-visible:shadow-md"
           >
-            <h2 className="font-semibold text-slate-950">{form.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">{form.description}</p>
+            <h3 className="font-semibold text-foreground">{form.title}</h3>
+            <p className="mt-2 text-sm leading-6 text-secondary">{form.description}</p>
           </Link>
         ))}
       </div>

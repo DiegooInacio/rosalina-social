@@ -179,3 +179,15 @@ it('atualiza atividades no cadastro do aluno sem apagar dados e remove uma sele�
   await userEvent.selectOptions(screen.getByLabelText('Atividade matriculada (obrigatória)'), music.id)
   expect((screen.getByLabelText('Atividade matriculada (obrigatória)') as HTMLSelectElement).value).toBe(music.id)
 })
+
+it('permite renovar acesso expirado de administrador antes de consultar atividades', async () => {
+  const claims = (expired: boolean) => `header.${btoa(JSON.stringify({ sub: 'admin@test.local', role: 'ADMIN', type: 'access', exp: Math.floor(Date.now() / 1000) + (expired ? -60 : 3600) }))}.signature`
+  setTokens(claims(true), 'refresh')
+  const original = fetchMock.getMockImplementation()!
+  fetchMock.mockImplementation(async (url, init) => String(url).endsWith('/auth/refresh')
+    ? Response.json({ accessToken: claims(false), refreshToken: 'new-refresh' }) : original(url, init))
+  showPage()
+  expect(await screen.findByText('Capoeira')).toBeTruthy()
+  expect(screen.getByRole('link', { name: 'Atividades' })).toBeTruthy()
+  expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/auth/refresh'))).toHaveLength(1)
+})

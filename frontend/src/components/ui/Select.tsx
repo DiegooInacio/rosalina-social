@@ -20,7 +20,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
 
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-slate-700">
+      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-body">
         {label}
       </label>
       <select
@@ -28,8 +28,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
         id={id}
         aria-invalid={Boolean(error)}
         aria-describedby={errorId}
-        className={`min-h-11 w-full rounded-lg border bg-white px-3 py-2 text-slate-900 ${
-          error ? 'border-red-500' : 'border-slate-300'
+        className={`min-h-11 w-full rounded-lg border bg-surface px-3 py-2 text-foreground disabled:bg-subtle disabled:text-muted ${
+          error ? 'border-danger' : 'border-control'
         } ${className}`}
         {...props}
       >
@@ -41,7 +41,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
         ))}
       </select>
       {error && (
-        <p id={errorId} className="mt-1 text-sm text-red-600">
+        <p id={errorId} className="mt-1 text-sm text-danger">
           {error}
         </p>
       )}

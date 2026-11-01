@@ -25,6 +25,6 @@ public class PopulationSurvey {
   @Column(name = "created_by", nullable = false, updatable = false) UUID createdBy;
   @Column(name = "created_at", nullable = false, updatable = false) Instant createdAt;
   @Column(name = "updated_at", nullable = false) Instant updatedAt;
-  @PrePersist void create() { createdAt = Instant.now(); updatedAt = createdAt; }
-  @PreUpdate void update() { updatedAt = Instant.now(); }
+  @PrePersist void create() { createdAt = br.org.rosalina.social.common.RecordRevision.next(null); updatedAt = createdAt; }
+  @PreUpdate void update() { updatedAt = br.org.rosalina.social.common.RecordRevision.next(updatedAt); }
 }

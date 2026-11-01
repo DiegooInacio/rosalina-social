@@ -40,8 +40,17 @@ public class FormDraftService {
 
   public Response create(CreateRequest request) {
     checkSize(request.data(), "data");
+    UUID ownerId = owner();
+    if (request.requestId() != null) {
+      int inserted = drafts.createOnce(request.requestId(), ownerId, request.formType().name(), text(request.title()), request.data().toString());
+      FormDraft existing = drafts.findOwnedForUpdate(request.requestId(), ownerId).orElseThrow(() ->
+          new ApiException(HttpStatus.CONFLICT, "Identificador de criação indisponível. Inicie um novo rascunho."));
+      if (existing.formType != request.formType()) throw ApiException.field("requestId", "Este identificador já foi usado em outro formulário.");
+      if (inserted == 1) audit.record("CREATE_DRAFT", "FORM_DRAFT", existing.id);
+      return response(existing);
+    }
     FormDraft draft = new FormDraft();
-    draft.ownerId = owner();
+    draft.ownerId = ownerId;
     draft.formType = request.formType();
     draft.title = text(request.title());
     draft.data = request.data().deepCopy();

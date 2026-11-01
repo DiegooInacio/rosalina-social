@@ -38,18 +38,20 @@ export function isValidDate(value: string) {
 }
 
 export function isValidPhone(value: string) {
-  if (!/^[\d() +-]+$/.test(value)) return false
+  return phoneValidationMessage(value) === undefined
+}
+
+export function phoneValidationMessage(value: string): string | undefined {
+  if (!/^[\d() +-]+$/.test(value)) return 'Informe somente os números do telefone com DDD.'
   const digits = onlyDigits(value)
 
-  if (digits.length !== 10 && digits.length !== 11) return false
-  if (Number(digits.slice(0, 2)) < 11) return false // DDD válido começa em 11
-  if (digits.length === 11 && digits[2] !== '9') return false // celular começa com 9
-
-  return true
+  if (digits.length !== 10 && digits.length !== 11) return 'Informe o DDD e o telefone completo: 10 dígitos para fixo ou 11 para celular.'
+  if (Number(digits.slice(0, 2)) < 11) return 'Confira o DDD: informe os dois dígitos da sua região, sem zero à esquerda.'
+  if (digits.length === 11 && digits[2] !== '9') return 'O celular deve começar com 9 depois do DDD. Ex.: (85) 99999-9999.'
 }
 
 export function isValidCep(value: string) {
-  return /^\d{5}-?\d{3}$/.test(value)
+  return /^\d{5}-?\d{3}$/.test(value) && onlyDigits(value) !== '00000000'
 }
 
 export function isPastDate(value: string) {

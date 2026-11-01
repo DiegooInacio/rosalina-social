@@ -271,4 +271,41 @@ class FormDraftApiIntegrationTest {
         .contentType(MediaType.APPLICATION_JSON).content(updateBody(0, name).toString()))
         .andReturn().getResponse().getStatus();
   }
+
+  @Test void creationRequestIdReusesTheOwnedDraftWithoutOverwritingEdits() throws Exception {
+    String key = UUID.randomUUID().toString();
+    var body = object("{\"requestId\":\"" + key + "\",\"formType\":\"STUDENT\",\"data\":{\"name\":\"Original\"}}");
+    var created = read(mvc.perform(post(DRAFTS).header("Authorization", "Bearer " + owner).contentType(MediaType.APPLICATION_JSON).content(body.toString())).andExpect(status().isCreated()));
+    assertEquals(key, created.get("id").asText());
+    mvc.perform(put(DRAFTS + "/" + key).header("Authorization", "Bearer " + owner).contentType(MediaType.APPLICATION_JSON).content(updateBody(0, "Edição posterior").toString())).andExpect(status().isOk());
+    mvc.perform(post(DRAFTS).header("Authorization", "Bearer " + owner).contentType(MediaType.APPLICATION_JSON).content(body.toString()))
+        .andExpect(status().isCreated()).andExpect(jsonPath("$.id").value(key)).andExpect(jsonPath("$.version").value(1)).andExpect(jsonPath("$.data.name").value("Edição posterior"));
+    assertEquals(1, jdbc.queryForObject("select count(*) from form_draft where id = ?", Integer.class, UUID.fromString(key)));
+    assertEquals(1, jdbc.queryForObject("select count(*) from audit_event where entity_id = ? and action = 'CREATE_DRAFT'", Integer.class, UUID.fromString(key)));
+    String another = operator();
+    mvc.perform(post(DRAFTS).header("Authorization", "Bearer " + another).contentType(MediaType.APPLICATION_JSON).content(body.toString())).andExpect(status().isConflict()).andExpect(jsonPath("$.data").doesNotExist());
+    body.put("formType", "POPULATION_SURVEY");
+    mvc.perform(post(DRAFTS).header("Authorization", "Bearer " + owner).contentType(MediaType.APPLICATION_JSON).content(body.toString())).andExpect(status().isBadRequest());
+  }
+
+  @Test void concurrentCreationWithTheSameRequestIdCreatesOneDraftAndOneAuditEvent() throws Exception {
+    String key = UUID.randomUUID().toString();
+    String body = "{\"requestId\":\"" + key + "\",\"formType\":\"POPULATION_SURVEY\",\"data\":{\"responsible\":{\"name\":\"Maria\"}}}";
+    var start = new CountDownLatch(1);
+    try (var executor = Executors.newFixedThreadPool(2)) {
+      var requests = new java.util.ArrayList<java.util.concurrent.Future<MvcResult>>();
+      for (int i = 0; i < 2; i++) requests.add(executor.submit(() -> {
+        start.await();
+        return mvc.perform(post(DRAFTS).header("Authorization", "Bearer " + owner).contentType(MediaType.APPLICATION_JSON).content(body)).andReturn();
+      }));
+      start.countDown();
+      for (var request : requests) {
+        var response = request.get(20, TimeUnit.SECONDS).getResponse();
+        assertEquals(201, response.getStatus());
+        assertEquals(key, json.readTree(response.getContentAsString()).get("id").asText());
+      }
+    }
+    assertEquals(1, jdbc.queryForObject("select count(*) from form_draft where id = ?", Integer.class, UUID.fromString(key)));
+    assertEquals(1, jdbc.queryForObject("select count(*) from audit_event where entity_id = ? and action = 'CREATE_DRAFT'", Integer.class, UUID.fromString(key)));
+  }
 }

@@ -107,7 +107,7 @@ public final class PopulationDtos {
     Housing housing, WorkAndBenefits workAndBenefits, Health health, List<Member> members,
     Authorizations authorizations, Declaration declaration,
     @Schema(accessMode = Schema.AccessMode.READ_ONLY) FinancialSummary financialSummary,
-    UUID createdBy, Instant createdAt, Instant updatedAt) {}
+    UUID createdBy, Instant createdAt, Instant updatedAt, String revision) {}
 
   @Schema(name = "PopulationSurveyListResponse")
   public record ListResponse(UUID id, String responsibleName, LocalDate referenceDate, Instant updatedAt) {}

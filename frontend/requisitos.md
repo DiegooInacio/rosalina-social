@@ -173,7 +173,7 @@ O formulário de cadastro de aluno deve estar em preenchimento.
 
 **Fluxo principal:**
 
-1. O sistema apresenta as seções referentes ao pai, à mãe e ao responsável.
+1. O sistema apresenta as seções na ordem mãe, pai e responsável. A seção da mãe começa aberta e as demais recolhidas.
 2. O usuário preenche os dados correspondentes.
 3. O usuário seleciona as opções de ocupação e escolaridade quando aplicável.
 4. O sistema valida os campos que possuam formato definido.
@@ -184,7 +184,9 @@ As informações familiares ficam vinculadas ao aluno cadastrado.
 
 **Critérios de aceitação:**
 
-- O sistema deverá apresentar separadamente os dados de pai, mãe e responsável.
+- O sistema deverá apresentar separadamente os dados de mãe, pai e responsável, nessa ordem de prioridade.
+- A mãe será a referência familiar quando informada; na ausência dela, o pai. Outro responsável será obrigatório somente quando mãe e pai não forem informados.
+- Cada seção poderá ser aberta ou escondida sem apagar dados. Se houver erro em uma seção recolhida, ela será aberta para correção.
 - O sistema deverá permitir indicar se cada pessoa sabe ler e escrever.
 - As opções de ocupação e escolaridade deverão respeitar as alternativas definidas no formulário.
 
@@ -223,7 +225,7 @@ O sistema deverá permitir registrar as condições socioeconômicas da família
 - Tipo de piso
 - Disponibilidade de energia elétrica
 
-**Entradas relacionadas ao saneamento:**
+**Entradas relacionadas ao saneamento (Sim/Não):**
 
 - Água
 - Esgoto

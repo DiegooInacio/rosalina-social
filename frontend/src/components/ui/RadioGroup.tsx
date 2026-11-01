@@ -15,10 +15,10 @@ export const RadioGroup = forwardRef<HTMLInputElement, Props>(function RadioGrou
 
   return (
     <fieldset disabled={disabled} aria-describedby={errorId} className={`min-w-0 ${className}`}>
-      <legend className="mb-1.5 text-sm font-medium text-slate-700">{label}</legend>
+      <legend className="mb-1.5 text-sm font-medium text-body">{label}</legend>
       <div className="flex flex-wrap gap-2">
         {[...options, { value: '', label: 'Não informado' }].map((option, index) => (
-          <label key={option.value} className="relative cursor-pointer">
+          <label key={option.value} className="relative cursor-pointer has-disabled:cursor-not-allowed">
             <input
               {...props}
               ref={ref}
@@ -30,13 +30,13 @@ export const RadioGroup = forwardRef<HTMLInputElement, Props>(function RadioGrou
               aria-describedby={errorId}
               className="peer sr-only"
             />
-            <span className={`flex min-h-11 items-center justify-center rounded-lg border bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 peer-checked:border-brand-600 peer-checked:bg-brand-50 peer-checked:text-brand-700 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand-600 peer-disabled:cursor-not-allowed peer-disabled:opacity-60 ${error ? 'border-red-500' : 'border-slate-300'}`}>
+            <span className={`flex min-h-11 items-center justify-center rounded-lg border bg-surface px-4 py-2 text-sm font-medium text-secondary transition-colors peer-enabled:hover:bg-canvas peer-checked:border-selected peer-checked:bg-success-soft peer-checked:text-link peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus peer-disabled:cursor-not-allowed peer-disabled:opacity-60 ${error ? 'border-danger' : 'border-control'}`}>
               {option.label}
             </span>
           </label>
         ))}
       </div>
-      {error && <p id={errorId} className="mt-1 text-sm text-red-600">{error}</p>}
+      {error && <p id={errorId} className="mt-1 text-sm text-danger">{error}</p>}
     </fieldset>
   )
 })
