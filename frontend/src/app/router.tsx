@@ -2,8 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router'
 import { LoginPage } from '../features/auth/LoginPage'
 import { ActivitiesPage } from '../features/activities/ActivitiesPage'
-import { RecordListPage } from '../features/records/RecordListPage'
-import { RecordDetailsPage } from '../features/records/RecordDetailsPage'
+import { ProfilePage } from '../features/profile/ProfilePage'
 import { AuthLayout } from '../layouts/AuthLayout'
 import { PrivateLayout } from '../layouts/PrivateLayout'
 import { PublicLayout } from '../layouts/PublicLayout'
@@ -36,6 +35,7 @@ export function AppRoutes() {
         <Route path="alunos/novo" element={<StudentRegistrationPage />} />
         <Route path="levantamentos/novo" element={<PopulationSurveyPage />} />
         <Route path="atividades" element={<ActivitiesPage />} />
+        <Route path="perfil" element={<ProfilePage />} />
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />
