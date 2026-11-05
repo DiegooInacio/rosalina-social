@@ -1,15 +1,21 @@
+import { useEffect, useRef } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { ApiError } from '../../lib/api'
-import { setTokens } from '../../lib/auth'
+import { getAccessToken, getRefreshToken, setTokens } from '../../lib/auth'
 import { login } from './auth.api'
 import { loginSchema, type LoginFormData } from './auth.schema'
 
 export function LoginForm() {
   const navigate = useNavigate()
+  const generation = useRef(0)
+  useEffect(() => {
+    const current = ++generation.current
+    return () => { generation.current = current + 1 }
+  }, [])
   const {
     formState: { errors, isSubmitting },
     handleSubmit,
@@ -21,11 +27,21 @@ export function LoginForm() {
   })
 
   async function handleLogin(data: LoginFormData) {
+    const operation = generation.current
+    const access = getAccessToken(), refresh = getRefreshToken()
+    const current = () => generation.current === operation
+    const sessionChanged = () => getAccessToken() !== access || getRefreshToken() !== refresh
     try {
       const tokens = await login(data.email, data.password)
+      if (!current()) return
+      if (sessionChanged()) {
+        setError('root', { message: 'A sessão mudou enquanto você entrava. Recarregue a página para continuar com a conta atual.' })
+        return
+      }
       setTokens(tokens.accessToken, tokens.refreshToken)
       navigate('/app')
     } catch (error) {
+      if (!current() || sessionChanged()) return
       if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
         setError('root', { message: 'E-mail ou senha incorretos.' })
       } else {
@@ -37,7 +53,7 @@ export function LoginForm() {
   }
 
   return (
-    <form className="space-y-5" onSubmit={handleSubmit(handleLogin)} aria-busy={isSubmitting} noValidate>
+    <form className="space-y-5" onSubmit={(event) => void handleSubmit(handleLogin)(event)} aria-busy={isSubmitting} noValidate>
       <Input
         id="email"
         type="email"

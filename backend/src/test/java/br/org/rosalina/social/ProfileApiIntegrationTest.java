@@ -152,4 +152,22 @@ class ProfileApiIntegrationTest {
     users.save(owner);
     mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + token)).andExpect(status().isForbidden());
   }
+
+  @Test void userCreationRejectsPasswordsOverBcryptLimitWithFieldErrors() throws Exception {
+    AppUser admin = create(Role.ADMIN);
+    String auth = "Bearer " + jwt.access(admin.getEmail(), "ADMIN");
+    for (String password : new String[]{"a".repeat(80), "á".repeat(37)}) {
+      mvc.perform(post("/api/v1/users").header("Authorization", auth).contentType(MediaType.APPLICATION_JSON)
+          .content(json.writeValueAsString(Map.of("name", "Pessoa", "email", UUID.randomUUID() + "@test.local", "role", "OPERADOR", "password", password))))
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fields.password").exists());
+    }
+    mvc.perform(post("/api/v1/users").header("Authorization", auth).contentType(MediaType.APPLICATION_JSON)
+        .content(json.writeValueAsString(Map.of("name", "Pessoa", "email", UUID.randomUUID() + "@test.local", "role", "OPERADOR", "password", "á".repeat(36)))))
+        .andExpect(status().isCreated());
+    mvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+        .content(json.writeValueAsString(Map.of("email", owner.getEmail(), "password", "a".repeat(80)))))
+        .andExpect(status().isUnauthorized());
+    password("a".repeat(80), "nova-senha-valida").andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.fields.currentPassword").exists());
+  }
 }

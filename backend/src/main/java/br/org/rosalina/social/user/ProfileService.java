@@ -2,7 +2,7 @@ package br.org.rosalina.social.user;
 
 import br.org.rosalina.social.audit.AuditService;
 import br.org.rosalina.social.common.ApiException;
-import java.nio.charset.StandardCharsets;
+import br.org.rosalina.social.common.PasswordValidation;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -37,16 +37,13 @@ public class ProfileService {
   @Transactional
   public void changePassword(String email, String currentPassword, String newPassword) {
     AppUser user = currentForUpdate(email);
-    if (!encoder.matches(currentPassword, user.getPasswordHash())) {
+    if (!PasswordValidation.fitsBcrypt(currentPassword) || !encoder.matches(currentPassword, user.getPasswordHash())) {
       throw ApiException.field("currentPassword", "Senha atual incorreta.");
     }
     if (newPassword.equals(currentPassword)) {
       throw ApiException.field("newPassword", "Escolha uma senha diferente da atual.");
     }
-    // BCrypt considera apenas os primeiros 72 bytes; evite truncar a senha silenciosamente.
-    if (newPassword.getBytes(StandardCharsets.UTF_8).length > 72) {
-      throw ApiException.field("newPassword", "A senha deve ocupar no máximo 72 bytes em UTF-8.");
-    }
+    PasswordValidation.validateNew(newPassword, "newPassword");
     user.setPasswordHash(encoder.encode(newPassword));
     audit.record("CHANGE_PASSWORD", "USER", user.getId());
   }

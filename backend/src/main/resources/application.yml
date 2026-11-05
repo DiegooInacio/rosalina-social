@@ -14,6 +14,9 @@ server:
   error.include-message: never
   forward-headers-strategy: framework
 app:
+  bootstrap:
+    email: ${BOOTSTRAP_ADMIN_EMAIL:admin@rosalina.local}
+    password: ${BOOTSTRAP_ADMIN_PASSWORD:admin12345}
   jwt:
     secret: ${JWT_SECRET:change-this-development-secret-to-a-base64-encoded-key-with-at-least-32-bytes}
     access-minutes: ${JWT_ACCESS_MINUTES:30}

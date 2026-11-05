@@ -41,6 +41,12 @@ Senha: admin12345
 
 Use `Ctrl+C` para encerrar o frontend e os containers iniciados pelo script.
 
+## Publicar no Heroku
+
+O projeto inclui uma imagem de produção que serve o frontend e a API no mesmo
+domínio, com PostgreSQL separado. Consulte o [passo a passo de publicação](docs/HEROKU.md)
+para configurar a conta, o banco, as credenciais e fazer o deploy.
+
 ## Estrutura
 
 ```text

@@ -1,0 +1,13 @@
+.git
+**/node_modules
+**/dist
+**/target
+**/test-results
+**/playwright-report
+**/.env
+**/.env.*
+!**/.env.example
+**/*.log
+.agents
+.codex
+.aws
