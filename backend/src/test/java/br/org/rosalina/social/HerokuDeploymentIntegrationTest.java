@@ -32,7 +32,9 @@ class HerokuDeploymentIntegrationTest {
   @Test void permitsTheFrontendAndKeepsApiDataPrivate() throws Exception {
     for (String path : new String[]{"/login", "/app", "/app/alunos", "/app/alunos/id/editar", "/app/perfil"})
       mvc.perform(get(path)).andExpect(status().isOk()).andExpect(forwardedUrl("/index.html"));
-    mvc.perform(get("/api/v1/students")).andExpect(status().isUnauthorized());
+    mvc.perform(get("/api/v1/students")).andExpect(status().isUnauthorized())
+        .andExpect(header().string("Referrer-Policy", "no-referrer"))
+        .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("no-store")));
     mvc.perform(get("/api/v1/form-drafts")).andExpect(status().isUnauthorized());
     mvc.perform(post("/app/alunos")).andExpect(status().isForbidden());
   }

@@ -110,6 +110,10 @@ O recibo não pode ser reaberto, sobrescrito ou descartado por `PUT`/`DELETE`.
 Operações simultâneas são serializadas por rascunho. A auditoria registra ações
 e identificadores, sem copiar o conteúdo pessoal de `data` ou `submission`.
 
+Rascunhos já representam tratamento de dados, inclusive antes das respostas de
+autorização. O contrato não implementa uma política de bases legais. As decisões
+necessárias para limitar a coleta por finalidade estão na [revisão LGPD](../docs/LGPD.md).
+
 Na integração, o frontend deve serializar os envios de autosave e concluir
 pelo endpoint `/complete` (em vez de criar o cadastro por fora e tentar apagar o
 rascunho depois). Os endpoints existentes continuam disponíveis para criação
@@ -268,7 +272,12 @@ Detalhes preenchidos exigem a condição correspondente:
 
 Detalhes continuam opcionais quando habilitados. Incoerência retorna 400 sem
 salvar parcialmente. As duas autorizações são independentes; não são exigidas
-respostas positivas para salvar. Assinaturas são nomes digitados, sem upload ou
+respostas positivas para salvar no contrato técnico atual. Isso não comprova
+que a operação tenha base legal: recusa/ausência de resposta não autorizam usos
+dependentes de consentimento. A associação precisa definir o fundamento de cada
+operação antes da coleta, incluindo autosave e dados sensíveis; consulte a
+[matriz de decisões](../docs/LGPD.md).
+Assinaturas são nomes digitados, sem upload ou
 certificação digital. `createdBy` identifica o usuário autenticado criador;
 a auditoria registra também quem altera.
 
@@ -324,7 +333,13 @@ As seções do levantamento são armazenadas em JSONB tipado pelos DTOs; integra
 possuem linhas e UUIDs próprios. Nome/CPF do responsável têm colunas para consulta.
 Validações de catálogo das seções JSONB são realizadas pelo serviço.
 Auditoria registra usuário, ação e cadastro, sem copiar informações de saúde
-ou documentos para o evento.
+ou documentos para o evento. Criação de levantamento registra
+`metadata.authorizations.current`; alterações das respostas registram
+`metadata.authorizations.previous` e `current`. Cada objeto contém somente
+`imageAndSound` e `personalData` com estados `GRANTED`, `REFUSED` ou `UNSPECIFIED`.
+Alteração sem mudança de resposta mantém metadados vazios. Esses eventos usam a
+mesma transação da ficha, não certificam consentimento válido e não preenchem
+retrospectivamente o histórico dos registros existentes.
 
 Antes de atualizar um ambiente existente, fazer backup do PostgreSQL. Aplicar
 as migrations antes de disponibilizar a nova API. Em produção, configurar HTTPS,

@@ -1,4 +1,5 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { localFormDataRevision } from '../../lib/local-form-data'
 import type { FieldValues, UseFormReturn } from 'react-hook-form'
 
 export type RecordEditor<T> = {
@@ -11,10 +12,12 @@ export type RecordEditor<T> = {
   cancel: () => void
 }
 export function useEditBackup<T extends FieldValues>(methods: UseFormReturn<T>, editor?: RecordEditor<T>) {
+  const [privacyRevision] = useState(localFormDataRevision)
   useEffect(() => {
     if (!editor) return
     const original = JSON.stringify(editor.originalValues)
     const persist = () => {
+      if (privacyRevision !== localFormDataRevision()) return
       const data = methods.getValues()
       try {
         const stored = JSON.parse(sessionStorage.getItem(editor.storageKey) ?? 'null')
@@ -28,5 +31,5 @@ export function useEditBackup<T extends FieldValues>(methods: UseFormReturn<T>, 
     }
     window.addEventListener('beforeunload', beforeUnload)
     return () => { subscription.unsubscribe(); window.removeEventListener('beforeunload', beforeUnload) }
-  }, [methods, editor])
+  }, [methods, editor, privacyRevision])
 }

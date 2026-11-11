@@ -8,7 +8,7 @@ import { StudentRegistrationForm } from '../src/features/student-registration/St
 import { PopulationSurveyForm } from '../src/features/population-survey/PopulationSurveyForm'
 import { draftStorageKey, readPending } from '../src/features/drafts/draft-storage'
 import type { FormDraft, FormType } from '../src/features/drafts/drafts.api'
-import { setTokens, getUserSubject } from '../src/lib/auth'
+import { clearTokens, setTokens, getUserSubject } from '../src/lib/auth'
 import { PrivateLayout } from '../src/layouts/PrivateLayout'
 import * as cep from '../src/lib/cep'
 
@@ -352,6 +352,35 @@ it('não envia dados do preenchimento antigo se a conta autenticada mudar', asyn
   expect(calls('POST')).toHaveLength(0)
   expect(readPending(originalKey)?.data.name).toBe('Dados do primeiro usuário')
   expect(readPending(draftStorageKey('STUDENT'))).toBeNull()
+})
+
+it('uma resposta atrasada de autosave não recria a cópia local após sair da conta', async () => {
+  show('STUDENT'); await ready()
+  change('Nome (obrigatório)', 'Rascunho salvo')
+  await saveNow()
+  let release!: () => void
+  updateGate = new Promise<void>(resolve => { release = resolve })
+  change('Nome (obrigatório)', 'Dados pendentes')
+  const key = draftStorageKey('STUDENT')
+  await userEvent.click(screen.getByRole('button', { name: 'Salvar rascunho agora' }))
+  await waitFor(() => expect(calls('PUT')).toHaveLength(1))
+  act(() => { clearTokens(true); signIn(); release() })
+  await waitFor(() => expect(screen.queryByText('Salvando rascunho...')).toBeNull())
+  expect(readPending(key)).toBeNull()
+})
+
+it('não conclui o cadastro com a sessão nova se a conta sair durante o salvamento do rascunho', async () => {
+  show('STUDENT'); await ready()
+  valid('STUDENT'); await saveNow()
+  let release!: () => void
+  updateGate = new Promise<void>(resolve => { release = resolve })
+  change('Nome (obrigatório)', 'Alteração antes de concluir')
+  await userEvent.click(screen.getByRole('button', { name: 'Salvar cadastro' }))
+  await waitFor(() => expect(calls('PUT')).toHaveLength(1))
+  act(() => { clearTokens(true); signIn('outra-conta@test.local'); release() })
+  await screen.findByText(/Não foi possível salvar o cadastro/)
+  expect(recordCount).toBe(0)
+  expect(fetchMock.mock.calls.some(([path]) => String(path).endsWith('/complete'))).toBe(false)
 })
 
 

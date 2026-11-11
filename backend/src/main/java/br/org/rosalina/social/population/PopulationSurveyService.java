@@ -30,7 +30,8 @@ public class PopulationSurveyService {
     survey.createdBy = users.findByEmailIgnoreCase(SecurityContextHolder.getContext().getAuthentication().getName()).orElseThrow().getId();
     apply(survey, normalized);
     surveys.saveAndFlush(survey);
-    audit.record("CREATE", "POPULATION_SURVEY", survey.id);
+    audit.record("CREATE", "POPULATION_SURVEY", survey.id,
+        Map.of("authorizations", Map.of("current", authorizationState(normalized.authorizations()))));
     return response(survey);
   }
 
@@ -38,11 +39,14 @@ public class PopulationSurveyService {
     PopulationSurvey survey = surveys.findForUpdate(id).orElseThrow(() -> new NotFoundException("Levantamento não encontrado."));
     br.org.rosalina.social.common.RecordRevision.requireMatch(revision, survey.updatedAt);
     Request normalized = validation.normalize(request, survey.referenceDate, survey.data.responsible());
+    Map<String, String> previous = authorizationState(survey.data.authorizations());
+    Map<String, String> current = authorizationState(normalized.authorizations());
     apply(survey, normalized);
     // Touch parent even for member-only changes so updatedAt advances.
     survey.updatedAt = br.org.rosalina.social.common.RecordRevision.next(survey.updatedAt);
     surveys.flush();
-    audit.record("UPDATE", "POPULATION_SURVEY", id);
+    audit.record("UPDATE", "POPULATION_SURVEY", id, previous.equals(current) ? Map.of()
+        : Map.of("authorizations", Map.of("previous", previous, "current", current)));
     return response(survey);
   }
 
@@ -57,6 +61,16 @@ public class PopulationSurveyService {
 
   private PopulationSurvey find(UUID id) {
     return surveys.findById(id).orElseThrow(() -> new NotFoundException("Levantamento não encontrado."));
+  }
+
+  // Registra a resposta, sem afirmar validade jurídica do consentimento.
+  private static Map<String, String> authorizationState(Authorizations value) {
+    return Map.of("imageAndSound", choice(value == null ? null : value.imageAndSound()),
+        "personalData", choice(value == null ? null : value.personalData()));
+  }
+
+  private static String choice(Boolean value) {
+    return value == null ? "UNSPECIFIED" : value ? "GRANTED" : "REFUSED";
   }
 
   private void apply(PopulationSurvey survey, Request request) {

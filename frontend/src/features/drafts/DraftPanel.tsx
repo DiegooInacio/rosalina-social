@@ -33,7 +33,7 @@ export function DraftPanel({ draft, onRetryComplete }: { draft: FormDraftControl
         disabled={!draft.canEdit || !['pending', 'error'].includes(draft.saveState) || draft.action !== 'none'}
         onClick={() => void draft.flush()}>Salvar rascunho agora</Button>
     </div>
-    <p className="text-sm text-secondary">Este preenchimento fica salvo como rascunho. Para recomeçar, use Limpar formulário.</p>
+    <p className="text-sm text-secondary">Este preenchimento fica salvo como rascunho. Para recomeçar, use Limpar formulário. Ao sair da conta, as cópias pendentes nas abas são removidas; os rascunhos já salvos no servidor continuam disponíveis.</p>
     {draft.choices.some((item) => item.id !== draft.activeDraftId) && <details className="rounded-lg border border-line bg-surface p-4">
       <summary className="min-h-11 cursor-pointer rounded-md px-2 py-2 text-sm font-medium text-body transition-colors hover:bg-canvas">Outros rascunhos salvos</summary>
       <ul className="mt-3 divide-y divide-line">{draft.choices.filter((item) => item.id !== draft.activeDraftId).map((item) => <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-3">

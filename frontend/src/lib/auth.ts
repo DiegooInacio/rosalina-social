@@ -1,3 +1,5 @@
+import { discardLocalFormData } from './local-form-data'
+
 const ACCESS_KEY = 'rosalina.accessToken'
 const REFRESH_KEY = 'rosalina.refreshToken'
 type UserRole = 'ADMIN' | 'OPERADOR'
@@ -26,10 +28,11 @@ export function setTokens(accessToken: string, refreshToken: string) {
   window.dispatchEvent?.(new Event('rosalina:session'))
 }
 
-export function clearTokens() {
+export function clearTokens(discardLocalCopies = false) {
   confirmedRole = null;
   localStorage.removeItem(ACCESS_KEY)
   localStorage.removeItem(REFRESH_KEY)
+  if (discardLocalCopies) discardLocalFormData()
   window.dispatchEvent?.(new Event('rosalina:session'))
 }
 

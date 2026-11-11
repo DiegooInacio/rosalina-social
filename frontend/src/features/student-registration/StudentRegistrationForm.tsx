@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { CollectionNotice } from '../../components/ui/CollectionNotice'
 import { EditorActions } from '../records/EditorActions'
 import { useEditBackup, type RecordEditor } from '../records/edit-session'
 import { studentAddressFields } from '../../lib/cep-fields'
@@ -91,6 +92,7 @@ export function StudentRegistrationForm({ editor }: { editor?: RecordEditor<Stud
 
   return (
     <FormProvider {...methods}>
+      {!editor && <CollectionNotice />}
       {!editor && <DraftPanel draft={draft} onRetryComplete={() => void verifyCompletion()} />}
       <form className="mt-8" onSubmit={handleSubmit(onSubmit, () => {
         setSubmitMessage({ type: 'error', text: 'O cadastro não foi salvo. Revise os campos destacados e tente novamente.' })

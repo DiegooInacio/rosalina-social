@@ -20,6 +20,8 @@ describe('serviço de CEP', () => {
     expect(fetchMock).toHaveBeenCalledOnce()
     expect(fetchMock.mock.calls[0][0]).toBe('https://viacep.com.br/ws/60744390/json/')
     expect(fetchMock.mock.calls[0][1]?.headers).toBeUndefined()
+    expect(fetchMock.mock.calls[0][1]?.referrerPolicy).toBe('no-referrer')
+    expect(fetchMock.mock.calls[0][1]?.credentials).toBe('omit')
   })
 
   it('distingue CEP inexistente de indisponibilidade', async () => {

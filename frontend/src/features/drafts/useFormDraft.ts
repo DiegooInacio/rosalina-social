@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { FieldValues, UseFormReturn } from 'react-hook-form'
 import { ApiError } from '../../lib/api'
 import { getUserSubject } from '../../lib/auth'
+import { localFormDataRevision } from '../../lib/local-form-data'
 import { completeDraft, createDraft, discardDraft, getDraft, listDrafts, updateDraft, type DraftCompletion, type DraftSummary, type FormDraft, type FormType } from './drafts.api'
 import { draftStorageKey, readPending, writePending, type PendingDraft } from './draft-storage'
 
@@ -28,7 +29,7 @@ export function useFormDraft<T extends FieldValues>(formType: FormType, methods:
     draft: null as FormDraft | null, creationId: undefined as string | undefined, latest: structuredClone(methods.getValues()),
     ack: JSON.stringify(methods.getValues()), blocked: false, paused: false, suppress: false,
     submission: undefined as object | undefined, key: draftStorageKey(formType), owner: getUserSubject(),
-    local: readPending(draftStorageKey(formType)), active: false, ready: false,
+    local: readPending(draftStorageKey(formType)), active: false, ready: false, privacyRevision: localFormDataRevision(),
   }).current
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const queue = useRef<Promise<unknown>>(Promise.resolve())
@@ -45,9 +46,11 @@ export function useFormDraft<T extends FieldValues>(formType: FormType, methods:
   }
   function cancelTimer() { clearTimeout(timer.current); timer.current = undefined }
   function assertOwner() {
+    if (session.privacyRevision !== localFormDataRevision()) throw new Error('Este preenchimento foi encerrado ao sair da conta. Reabra o formulário para continuar.')
     if (!session.owner || session.owner !== getUserSubject()) throw new Error('Entre novamente com o usuário deste preenchimento para continuar.')
   }
   function storePending() {
+    if (session.privacyRevision !== localFormDataRevision()) return
     const existing = readPending(session.key)
     if (!session.active && existing && JSON.stringify(existing.data) !== JSON.stringify(session.latest)) return
     const pending = session.blocked || JSON.stringify(session.latest) !== session.ack || session.submission || session.creationId
@@ -81,11 +84,13 @@ export function useFormDraft<T extends FieldValues>(formType: FormType, methods:
     try {
       if (session.draft) {
         session.draft = await updateDraft(session.draft, snapshot, title(snapshot))
+        assertOwner()
         session.ack = raw
       } else {
         session.creationId ??= crypto.randomUUID()
         storePending()
         session.draft = await createDraft(formType, snapshot, title(snapshot), session.creationId)
+        assertOwner()
         session.creationId = undefined
         if (session.draft.status !== 'DRAFT') throw new ApiError('Este rascunho já foi concluído. Confira o cadastro antes de continuar.', 409)
         // A resposta pode confirmar uma criação anterior cujo conteúdo já mudou.
@@ -207,6 +212,7 @@ export function useFormDraft<T extends FieldValues>(formType: FormType, methods:
         assertOwner()
         if (!session.draft && session.creationId) {
           session.draft = await createDraft(formType, session.latest, title(session.latest), session.creationId)
+          assertOwner()
           session.creationId = undefined
         }
         if (session.draft) {

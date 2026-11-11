@@ -47,7 +47,13 @@ O projeto inclui uma imagem de produção que serve o frontend e a API no mesmo
 domínio, com PostgreSQL separado. Consulte o [passo a passo de publicação](docs/HEROKU.md)
 para configurar a conta, o banco, as credenciais e fazer o deploy.
 
-## Estrutura
+## Privacidade e LGPD
+
+A [revisão de privacidade](docs/LGPD.md) registra o inventário de dados, fontes
+oficiais consultadas, melhorias técnicas e decisões pendentes da associação.
+O checkbox de autorização não define, por si só, a base legal de um tratamento.
+
+## Estrutura do repositório
 
 ```text
 rosalina-social/

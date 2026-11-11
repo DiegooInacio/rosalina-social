@@ -318,6 +318,35 @@ class FormsApiIntegrationTest {
     assertEquals(0, jdbc.queryForObject("select count(*) from audit_event where entity_id = ? and metadata like '%Informação sensível%'", Integer.class, id));
   }
 
+  @Test void authorizationResponsesHaveIndependentTransactionalAuditWithoutSensitivePayload() throws Exception {
+    String token = operator(admin()); var body = minimal();
+    body.set("health", payload("{\"allergies\":\"Dado de saúde privado\"}"));
+    body.set("authorizations", payload("{\"imageAndSound\":false,\"personalData\":true}"));
+    var created = create(body, token); UUID id = UUID.fromString(created.get("id").asText());
+    var initial = json.readTree(jdbc.queryForObject("select metadata from audit_event where entity_id=? and action='CREATE'", String.class, id));
+    assertEquals("REFUSED", initial.at("/authorizations/current/imageAndSound").asText());
+    assertEquals("GRANTED", initial.at("/authorizations/current/personalData").asText());
+    body.set("authorizations", payload("{\"imageAndSound\":false,\"personalData\":false}"));
+    mvc.perform(versionedPut(SURVEYS + "/" + id, token).contentType(MediaType.APPLICATION_JSON).content(body.toString()))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.authorizations.imageAndSound").value(false))
+        .andExpect(jsonPath("$.authorizations.personalData").value(false));
+    var changed = json.readTree(jdbc.queryForObject("select metadata from audit_event where entity_id=? and action='UPDATE'", String.class, id));
+    assertEquals("GRANTED", changed.at("/authorizations/previous/personalData").asText());
+    assertEquals("REFUSED", changed.at("/authorizations/current/personalData").asText());
+    assertEquals("REFUSED", changed.at("/authorizations/current/imageAndSound").asText());
+    assertFalse(changed.toString().contains("Dado de saúde privado"));
+    assertEquals(2, jdbc.queryForObject("select count(*) from audit_event where entity_id=? and actor_id=? and occurred_at is not null", Integer.class, id, UUID.fromString(created.get("createdBy").asText())));
+    body.set("authorizations", payload("{\"imageAndSound\":true,\"personalData\":true}"));
+    body.set("health", payload("{\"hasDisability\":false,\"disabilityDescription\":\"Inválido\"}"));
+    mvc.perform(versionedPut(SURVEYS + "/" + id, token).contentType(MediaType.APPLICATION_JSON).content(body.toString())).andExpect(status().isBadRequest());
+    assertEquals(2, jdbc.queryForObject("select count(*) from audit_event where entity_id=?", Integer.class, id));
+    mvc.perform(get(SURVEYS + "/" + id).header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.authorizations.personalData").value(false));
+    body.remove("health"); body.remove("authorizations");
+    mvc.perform(versionedPut(SURVEYS + "/" + id, token).contentType(MediaType.APPLICATION_JSON).content(body.toString())).andExpect(status().isOk());
+    assertEquals(1, jdbc.queryForObject("select count(*) from audit_event where entity_id=? and metadata like '%UNSPECIFIED%'", Integer.class, id));
+  }
+
   @Test void allSixClassificationsAreRequiredOnCreateAndUpdate() throws Exception {
     String token = admin(); var created = create(minimal(), token);
     for (String field : PopulationChoicesFixture.FIELDS.keySet()) {

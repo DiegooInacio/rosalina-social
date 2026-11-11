@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { Button } from '../../components/ui/Button'
 import { ApiError, apiRequest } from '../../lib/api'
 import { getUserSubject } from '../../lib/auth'
+import { localFormDataRevision } from '../../lib/local-form-data'
 import { restoreDraftValues } from '../drafts/draft-storage'
 import { StudentRegistrationForm } from '../student-registration/StudentRegistrationForm'
 import { toStudentRequest } from '../student-registration/student.schema'
@@ -21,6 +22,7 @@ function EditSession({ kind, id, record: loadedRecord }: { kind: RecordKind; id:
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const [owner] = useState(getUserSubject)
+  const [privacyRevision] = useState(localFormDataRevision)
   const key = `rosalina.recordEdit.${encodeURIComponent(owner ?? '')}.${kind}.${id}`
   const original = useMemo(() => kind === 'students' ? studentEditValues(record) : populationEditValues(record), [kind, record])
   const retained = useMemo(() => catalogIds(original), [original])
@@ -50,6 +52,7 @@ function EditSession({ kind, id, record: loadedRecord }: { kind: RecordKind; id:
   function removeBackup() { try { sessionStorage.removeItem(key) } catch { /* Sem cópia disponível. */ } }
   function cancel() { removeBackup(); navigate(target) }
   function assertOwner() {
+    if (privacyRevision !== localFormDataRevision()) throw new ApiError('Esta edição foi encerrada ao sair da conta. Reabra a edição para continuar.', 409)
     if (!owner || owner !== getUserSubject()) throw new ApiError('A conta mudou. Entre novamente com o usuário desta edição.', 409)
   }
   function assertCurrent(operation: number) {
@@ -58,6 +61,7 @@ function EditSession({ kind, id, record: loadedRecord }: { kind: RecordKind; id:
   }
   function success(operation: number) { assertCurrent(operation); pendingReceipt.current = null; removeBackup(); navigate(target, { replace: true, state: { recordUpdated: true } }) }
   function remember(value: EditReceipt | null) {
+    if (privacyRevision !== localFormDataRevision()) return
     pendingReceipt.current = value
     setReceipt(value)
     try {

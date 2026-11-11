@@ -13,6 +13,6 @@ export function logout() {
       }
     }
     if (getRefreshToken() !== refreshToken) throw new Error('Sua sessão mudou. Confira a conta atual antes de sair.')
-    clearTokens()
+    clearTokens(true)
   })
 }

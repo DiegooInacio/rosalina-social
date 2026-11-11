@@ -13,6 +13,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
 import org.springframework.web.cors.*;
 
 @Configuration
@@ -23,6 +24,7 @@ public class SecurityConfig {
 
   @Bean SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwt, Environment env) throws Exception {
     return http.csrf(c -> c.disable()).cors(c -> {})
+        .headers(headers -> headers.referrerPolicy(policy -> policy.policy(ReferrerPolicy.NO_REFERRER)))
         .exceptionHandling(errors -> errors
             .authenticationEntryPoint((request, response, error) -> {
               if (!request.getRequestURI().startsWith("/api/")) { response.sendError(403); return; }

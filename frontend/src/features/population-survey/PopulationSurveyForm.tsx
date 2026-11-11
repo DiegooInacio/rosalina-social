@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { CollectionNotice } from '../../components/ui/CollectionNotice'
 import { EditorActions } from '../records/EditorActions'
 import { useEditBackup, type RecordEditor } from '../records/edit-session'
 import { populationAddressFields } from '../../lib/cep-fields'
@@ -80,6 +81,7 @@ export function PopulationSurveyForm({ editor }: { editor?: RecordEditor<Populat
   }
   return (
     <FormProvider {...methods}>
+      {!editor && <CollectionNotice />}
       {!editor && <DraftPanel draft={draft} onRetryComplete={() => void verifyCompletion()} />}
       <form className="mt-8" onSubmit={methods.handleSubmit(onSubmit, () => {
         setMessage({ type: 'error', text: 'O levantamento não foi salvo. Revise os campos destacados e tente novamente.' })
