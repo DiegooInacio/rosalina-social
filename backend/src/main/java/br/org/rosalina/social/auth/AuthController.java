@@ -1,9 +1,28 @@
 package br.org.rosalina.social.auth;
-import br.org.rosalina.social.audit.AuditService; import br.org.rosalina.social.common.ApiException; import br.org.rosalina.social.user.*; import io.swagger.v3.oas.annotations.media.Schema; import jakarta.validation.Valid; import jakarta.validation.constraints.*; import org.springframework.http.*; import org.springframework.security.crypto.password.PasswordEncoder; import org.springframework.web.bind.annotation.*;
-@RestController @RequestMapping("/api/v1/auth") public class AuthController {
- private final AppUserRepository users; private final PasswordEncoder encoder; private final JwtService jwt; private final AuditService audit;
- public AuthController(AppUserRepository u,PasswordEncoder e,JwtService j,AuditService a){users=u;encoder=e;jwt=j;audit=a;}
- @Schema(name="AuthLoginRequest") public record LoginRequest(@NotBlank @Email String email,@NotBlank String password){} @Schema(name="AuthRefreshRequest") public record RefreshRequest(@NotBlank String refreshToken){} @Schema(name="AuthTokenResponse") public record TokenResponse(String accessToken,String refreshToken,String tokenType){}
- @PostMapping("/login") TokenResponse login(@Valid @RequestBody LoginRequest r){AppUser u=users.findByEmailIgnoreCase(r.email()).filter(AppUser::isActive).orElseThrow(()->new ApiException(HttpStatus.UNAUTHORIZED,"Credenciais inválidas."));if(!br.org.rosalina.social.common.PasswordValidation.fitsBcrypt(r.password())||!encoder.matches(r.password(),u.getPasswordHash()))throw new ApiException(HttpStatus.UNAUTHORIZED,"Credenciais inválidas.");audit.record("LOGIN","USER",u.getId());return new TokenResponse(jwt.access(u.getEmail(),u.getRole().name()),jwt.refresh(u.getEmail()),"Bearer");}
- @PostMapping("/refresh") TokenResponse refresh(@Valid @RequestBody RefreshRequest r){try{var c=jwt.parse(r.refreshToken());if(!"refresh".equals(c.get("type",String.class)))throw new IllegalArgumentException();AppUser u=users.findByEmailIgnoreCase(c.getSubject()).filter(AppUser::isActive).orElseThrow();return new TokenResponse(jwt.access(u.getEmail(),u.getRole().name()),jwt.refresh(u.getEmail()),"Bearer");}catch(Exception e){throw new ApiException(HttpStatus.UNAUTHORIZED,"Refresh token inválido.");}}
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/v1/auth")
+public class AuthController {
+  private final AuthService service;
+  private final LoginLimiter limiter;
+  public AuthController(AuthService service, LoginLimiter limiter) { this.service=service; this.limiter=limiter; }
+  @Schema(name="AuthLoginRequest")
+  public record LoginRequest(@NotBlank @Email @Size(max=254) String email,@NotBlank @Size(max=100) String password) {}
+  @Schema(name="AuthRefreshRequest")
+  public record RefreshRequest(@NotBlank @Size(max=4096) String refreshToken) {}
+  @Schema(name="AuthTokenResponse")
+  public record TokenResponse(String accessToken,String refreshToken,String tokenType) {}
+  @PostMapping("/login")
+  TokenResponse login(@Valid @RequestBody LoginRequest r, HttpServletRequest request) { limiter.check(r.email().strip().toLowerCase(java.util.Locale.ROOT),request.getRemoteAddr()); return service.login(r.email(),r.password()); }
+  @PostMapping("/refresh")
+  TokenResponse refresh(@Valid @RequestBody RefreshRequest r) { return service.refresh(r.refreshToken()); }
+  @PostMapping("/logout") @ResponseStatus(HttpStatus.NO_CONTENT)
+  void logout(@Valid @RequestBody RefreshRequest r, @RequestHeader(value="Authorization",required=false) String authorization) { service.logout(r.refreshToken(),authorization); }
 }

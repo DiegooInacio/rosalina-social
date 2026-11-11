@@ -1,5 +1,8 @@
 package br.org.rosalina.social.user;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.LockModeType;
 import br.org.rosalina.social.audit.AuditService;
 import br.org.rosalina.social.common.ApiException;
 import br.org.rosalina.social.common.PasswordValidation;
@@ -10,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ProfileService {
+  @PersistenceContext private EntityManager entityManager;
   private final AppUserRepository users;
   private final PasswordEncoder encoder;
   private final AuditService audit;
@@ -45,12 +49,15 @@ public class ProfileService {
     }
     PasswordValidation.validateNew(newPassword, "newPassword");
     user.setPasswordHash(encoder.encode(newPassword));
+    user.invalidateSessions();
     audit.record("CHANGE_PASSWORD", "USER", user.getId());
   }
 
   private AppUser currentForUpdate(String email) {
-    return users.findByEmailForUpdate(email).filter(AppUser::isActive)
-        .orElseThrow(ProfileService::invalidSession);
+    AppUser user=users.findByEmailForUpdate(email).orElseThrow(ProfileService::invalidSession);
+    entityManager.refresh(user,LockModeType.PESSIMISTIC_WRITE);
+    if (!user.isActive()) throw invalidSession();
+    return user;
   }
 
   private static ApiException invalidSession() {

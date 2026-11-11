@@ -257,8 +257,10 @@ estabilidade do layout durante o autosave, restauração de rascunhos, máscaras
 sincronização do responsável e edição por PUT com preservação de integrantes.
 Os testes usam respostas de API simuladas e não alteram o banco de desenvolvimento.
 Traços de falhas ficam em `test-results/`. Os testes de integração com PostgreSQL
-continuam no backend. O layout móvel limita a largura do menu para que ele role
-horizontalmente sem alargar a página inteira.
+continuam no backend. No celular, o botão **Menu** abre a navegação vertical em um painel lateral.
+O painel mantém o foco dentro dele, bloqueia a rolagem da página ao fundo e fecha
+ao navegar, tocar fora, pressionar Escape ou usar **Fechar**, devolvendo o foco
+ao botão. No computador, o menu lateral permanece visível durante a rolagem.
 
 
 ## Troca de conta, conflitos e repetição da criação
@@ -278,3 +280,59 @@ A API retorna o rascunho já existente sem sobrescrever suas atualizações. Se 
 preenchimento mudou durante a falha, o frontend aplica os novos dados por PUT
 com a versão confirmada. Esta correção precisa das versões atuais do frontend
 e da API; usa a chave primária existente, sem migração adicional.
+
+## Usuários e acessos
+
+Administradores acessam `/app/usuarios` pelo menu **Usuários e acessos**. A tela
+exibe a lista de contas, com busca por nome/e-mail, filtro de situação, edição de
+nome/cargo e ativação ou desativação de acessos. O botão **Novo usuário** abre
+`/app/usuarios/novo`, uma página exclusiva para nome, e-mail único, cargo e senha
+inicial. Ao criar, retorna à lista atualizada com confirmação de sucesso. Cancelar
+retorna à lista e pede confirmação se houver dados preenchidos. A ação **Editar**
+abre `/app/usuarios/:id/editar`, com nome e cargo preenchidos, e-mail somente
+leitura e sem campos de senha. A página também funciona por acesso direto ou
+reload, trata falhas de consulta e contas inexistentes. Salvar retorna à lista
+atualizada com confirmação; cancelar pede confirmação quando há alterações.
+Contas inativas continuam reservando seu e-mail. O e-mail de uma conta existente
+é somente leitura. O administrador não pode desativar nem rebaixar a própria
+conta. Para alterar a própria senha, deve usar **Meu perfil**.
+
+Os cargos existentes são **Administrador** (`ADMIN`) e **Operador** (`OPERADOR`).
+Ambos trabalham com alunos e levantamentos; apenas administradores gerenciam
+usuários e atividades. Alterações de cargo são verificadas pela API a cada
+pedido; para atualizar também o menu da conta alterada, entre novamente.
+
+**Redefinir senha** permite ao administrador definir uma nova senha de outra
+conta, com confirmação. Essa operação encerra as sessões anteriores, incluindo
+os tokens de renovação. Desativar e reativar também não restaura sessões antigas.
+Senhas não são persistidas pela tela no armazenamento do navegador, e a
+confirmação não é enviada à API. O administrador deve comunicar a senha à pessoa,
+que pode alterá-la em **Meu perfil**. Não há envio de e-mail ou recuperação
+pública por “Esqueci minha senha” neste fluxo.
+
+A API precisa da migration V8 (`session_version`).
+
+
+## Seleções opcionais
+
+A orientação de um select vazio fica oculta na lista de opções e não pode ser
+selecionada. Campos opcionais preenchidos mostram um ícone **×** dentro do campo, no lugar
+da seta, com nome acessível
+**Limpar seleção**, que restaura o valor vazio e mantém o foco no campo.
+A limpeza segue o mesmo fluxo de alteração do formulário, incluindo rascunhos,
+validação e detalhes condicionais. Nos filtros, limpar volta para **Todas**.
+Campos obrigatórios (situação do aluno, atividade e cargo) não oferecem limpeza.
+A escolha do tema mantém suas três opções reais, sem estado vazio.
+
+
+## Encerramento e renovação de sessões
+
+**Sair** aguarda a revogação de todas as sessões da conta no servidor antes de
+limpar os tokens e voltar ao login. Se a rede falhar, a interface informa o erro
+e permite tentar novamente. Alterar a própria senha volta ao login com uma
+confirmação e exige a nova senha. Rascunhos pendentes da aba são preservados.
+A renovação usa tokens de uso único e, em navegadores com Web Locks, compartilha
+um bloqueio entre abas para serializar renovação e logout. Após falha que perca a
+resposta da renovação, pode ser necessário entrar novamente; a API não aceita
+reutilização do token anterior. O login apresenta a mensagem de excesso de
+tentativas recebida com HTTP 429. A integração exige a API com a migration V9.

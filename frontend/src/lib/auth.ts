@@ -29,13 +29,20 @@ export function clearTokens() {
   window.dispatchEvent?.(new Event('rosalina:session'))
 }
 
-export function getUserSubject(): string | null {
+export function tokenSubject(token: string | null): string | null {
   try {
-    const payload = getAccessToken()?.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+    const payload = token?.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
     if (!payload) return null
     const claims = JSON.parse(atob(payload.padEnd(Math.ceil(payload.length / 4) * 4, '=')))
     return claims.type === 'access' && typeof claims.sub === 'string' && claims.sub.trim() ? claims.sub : null
   } catch { return null }
+}
+
+export function getUserSubject(): string | null { return tokenSubject(getAccessToken()) }
+
+// Serialize refresh/logout across tabs that share the same credentials.
+export function withSessionLock<T>(operation: () => Promise<T>): Promise<T> {
+  return navigator.locks ? navigator.locks.request('rosalina:session', operation) : operation()
 }
 
 // Esta informação controla a interface; a API continua validando as permissões.
@@ -53,3 +60,9 @@ export function getUserRole(): 'ADMIN' | 'OPERADOR' | null {
     return null
   }
 }
+
+// Keep the confirmation through an auth guard redirect in the same page lifecycle.
+let passwordChangedNotice = false
+export function markPasswordChanged() { passwordChangedNotice = true }
+export function hasPasswordChangedNotice() { return passwordChangedNotice }
+export function clearPasswordChangedNotice() { passwordChangedNotice = false }

@@ -1,2 +1,9 @@
 server.ssl.enabled: ${SSL_ENABLED:true}
 springdoc.swagger-ui.enabled: false
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+  bootstrap:
+    email: ${BOOTSTRAP_ADMIN_EMAIL}
+    password: ${BOOTSTRAP_ADMIN_PASSWORD}

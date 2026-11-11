@@ -1,0 +1,12 @@
+# Development only: a new signing key on each start invalidates prior local sessions.
+app:
+  jwt:
+    secret: ${JWT_SECRET:${random.uuid}${random.uuid}}
+  bootstrap:
+    email: ${BOOTSTRAP_ADMIN_EMAIL:admin@rosalina.local}
+    password: ${BOOTSTRAP_ADMIN_PASSWORD:admin12345}
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/rosalina}
+    username: ${DATABASE_USERNAME:rosalina}
+    password: ${DATABASE_PASSWORD:rosalina}

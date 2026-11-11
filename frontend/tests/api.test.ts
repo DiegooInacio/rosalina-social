@@ -108,3 +108,20 @@ it('o prazo também inclui a leitura do corpo da resposta', async () => {
     await result
   } finally { vi.useRealTimers() }
 })
+
+
+it('reaproveita renovação feita por outra aba enquanto aguarda o bloqueio', async () => {
+  const expired = token(true), current = token()
+  setTokens(expired, 'refresh-antigo')
+  const lock = vi.fn(async (_name: string, operation: () => Promise<unknown>) => {
+    setTokens(current, 'refresh-rotacionado-em-outra-aba')
+    return operation()
+  })
+  vi.stubGlobal('navigator', { locks: { request: lock } })
+  fetchMock.mockResolvedValue(Response.json({ ok: true }))
+  expect(await apiRequest('/api/v1/catalogs')).toEqual({ ok: true })
+  expect(fetchMock).toHaveBeenCalledOnce()
+  expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get('Authorization')).toBe(`Bearer ${current}`)
+  expect(getRefreshToken()).toBe('refresh-rotacionado-em-outra-aba')
+  expect(lock).toHaveBeenCalledOnce()
+})

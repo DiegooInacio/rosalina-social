@@ -1,5 +1,8 @@
 import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router'
+import { EditUserPage } from '../features/users/EditUserPage'
+import { NewUserPage } from '../features/users/NewUserPage'
+import { UsersPage } from '../features/users/UsersPage'
 import { LoginPage } from '../features/auth/LoginPage'
 import { ActivitiesPage } from '../features/activities/ActivitiesPage'
 import { ProfilePage } from '../features/profile/ProfilePage'
@@ -36,6 +39,9 @@ export function AppRoutes() {
         <Route path="levantamentos/:id" element={<RecordDetailsPage kind="population-surveys" />} />
         <Route path="alunos/novo" element={<StudentRegistrationPage />} />
         <Route path="levantamentos/novo" element={<PopulationSurveyPage />} />
+        <Route path="usuarios/:id/editar" element={<EditUserPage />} />
+        <Route path="usuarios/novo" element={<NewUserPage />} />
+        <Route path="usuarios" element={<UsersPage />} />
         <Route path="atividades" element={<ActivitiesPage />} />
         <Route path="perfil" element={<ProfilePage />} />
       </Route>

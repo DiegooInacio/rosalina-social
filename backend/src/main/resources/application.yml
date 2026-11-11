@@ -1,9 +1,9 @@
 spring:
   application.name: rosalina-social-api
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/rosalina}
-    username: ${DATABASE_USERNAME:rosalina}
-    password: ${DATABASE_PASSWORD:rosalina}
+    url: ${DATABASE_URL:}
+    username: ${DATABASE_USERNAME:}
+    password: ${DATABASE_PASSWORD:}
   jpa:
     open-in-view: false
     hibernate.ddl-auto: validate
@@ -15,10 +15,10 @@ server:
   forward-headers-strategy: framework
 app:
   bootstrap:
-    email: ${BOOTSTRAP_ADMIN_EMAIL:admin@rosalina.local}
-    password: ${BOOTSTRAP_ADMIN_PASSWORD:admin12345}
+    email: ${BOOTSTRAP_ADMIN_EMAIL:}
+    password: ${BOOTSTRAP_ADMIN_PASSWORD:}
   jwt:
-    secret: ${JWT_SECRET:change-this-development-secret-to-a-base64-encoded-key-with-at-least-32-bytes}
+    secret: ${JWT_SECRET:}
     access-minutes: ${JWT_ACCESS_MINUTES:30}
     refresh-days: ${JWT_REFRESH_DAYS:7}
   cors:

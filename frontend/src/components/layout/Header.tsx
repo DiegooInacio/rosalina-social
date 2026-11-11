@@ -1,13 +1,16 @@
 import { useSessionToken } from '../../features/auth/useSessionToken'
 import { Link, useNavigate } from 'react-router'
 import { useEffect, useRef, useState } from 'react'
-import { clearTokens, getUserSubject } from '../../lib/auth'
+import { getUserSubject } from '../../lib/auth'
+import { logout } from '../../features/auth/logout'
 import { ThemeSelector } from '../../features/theme/ThemeSelector'
 
 export function Header() {
   const navigate = useNavigate()
   const isLoggedIn = Boolean(useSessionToken())
   const [open, setOpen] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
+  const [logoutError, setLogoutError] = useState('')
   const accountRef = useRef<HTMLDivElement>(null)
   const toggleRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
@@ -29,10 +32,12 @@ export function Header() {
     }
   }, [open])
 
-  function handleLogout() {
-    setOpen(false)
-    clearTokens()
-    navigate('/login')
+  async function handleLogout() {
+    if (loggingOut) return
+    setLoggingOut(true); setLogoutError('')
+    try { await logout(); setOpen(false); navigate('/login') }
+    catch { setLogoutError('Não foi possível encerrar a sessão no servidor. Verifique a conexão e tente sair novamente.') }
+    finally { setLoggingOut(false) }
   }
 
   return (
@@ -57,7 +62,8 @@ export function Header() {
             {open && <nav id="account-navigation" aria-label="Minha conta" className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-line bg-surface p-2 shadow-lg">
               <p className="break-all border-b border-line-soft px-3 py-3 text-sm text-muted">{getUserSubject()}</p>
               <Link to="/app/perfil" onClick={() => setOpen(false)} className="block rounded-lg px-3 py-3 text-sm font-semibold text-body hover:bg-subtle">Meu perfil</Link>
-              <button type="button" onClick={handleLogout} className="w-full rounded-lg px-3 py-3 text-left text-sm font-semibold text-body hover:bg-subtle">Sair</button>
+              <button type="button" onClick={() => void handleLogout()} disabled={loggingOut} className="w-full rounded-lg px-3 py-3 text-left text-sm font-semibold text-body hover:bg-subtle">{loggingOut ? 'Saindo...' : 'Sair'}</button>
+              {logoutError && <p role="alert" className="px-3 py-2 text-sm text-danger">{logoutError}</p>}
             </nav>}
           </div>
         ) : (

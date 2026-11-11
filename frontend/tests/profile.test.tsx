@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { LoginPage } from '../src/features/auth/LoginPage'
 import { Header } from '../src/components/layout/Header'
 import { ProfilePage } from '../src/features/profile/ProfilePage'
 import { clearTokens, getAccessToken, setTokens } from '../src/lib/auth'
@@ -28,7 +29,7 @@ afterEach(() => {
 })
 
 function showPage() {
-  render(<MemoryRouter><ProfilePage /></MemoryRouter>)
+  render(<MemoryRouter><Routes><Route path="/" element={<ProfilePage />} /><Route path="/login" element={<LoginPage />} /></Routes></MemoryRouter>)
 }
 
 async function fillPasswords(confirmation = 'senha-nova-123') {
@@ -83,10 +84,11 @@ it('valida a confirmação antes de enviar e não persiste senhas no navegador',
   expect(fetchMock).toHaveBeenCalledTimes(1)
   fireEvent.change(screen.getByLabelText('Confirmar nova senha (obrigatório)'), { target: { value: 'senha-nova-123' } })
   await userEvent.click(screen.getByRole('button', { name: 'Alterar senha' }))
-  expect(await screen.findByText('Senha alterada com sucesso.')).toBeTruthy()
+  expect(await screen.findByText('Senha alterada com sucesso. Suas sessões foram encerradas. Entre com a nova senha.')).toBeTruthy()
+  expect(getAccessToken()).toBeNull()
   const [, init] = fetchMock.mock.calls.find(([, init]) => init?.method === 'PUT')!
   expect(JSON.parse(String(init?.body))).toEqual({ currentPassword: 'senha-antiga-123', newPassword: 'senha-nova-123' })
-  expect((screen.getByLabelText('Senha atual (obrigatória)') as HTMLInputElement).value).toBe('')
+  expect(screen.queryByLabelText('Senha atual (obrigatória)')).toBeNull()
   expect(JSON.stringify({ ...localStorage, ...sessionStorage })).not.toContain('senha-')
 })
 
@@ -148,4 +150,30 @@ it('atualiza o cabeçalho quando a sessão é encerrada fora do menu', async () 
   await act(async () => { clearTokens() })
   expect(screen.getByRole('link', { name: 'Entrar' })).toBeTruthy()
   expect(screen.queryByRole('button', { name: /Minha conta/ })).toBeNull()
+})
+
+
+it('aguarda revogação no servidor e preserva sessão para tentar sair novamente se a rede falhar', async () => {
+  render(<MemoryRouter initialEntries={['/app']}><Header /><Routes><Route path="/app" element={<p>Painel</p>} /><Route path="/login" element={<p>Login</p>} /></Routes></MemoryRouter>)
+  await userEvent.click(screen.getByRole('button', { name: /Minha conta/ }))
+  fetchMock.mockRejectedValueOnce(new Error('offline'))
+  await userEvent.click(screen.getByRole('button', { name: 'Sair' }))
+  expect(await screen.findByText(/Não foi possível encerrar a sessão no servidor/)).toBeTruthy()
+  expect(getAccessToken()).not.toBeNull()
+  await userEvent.click(screen.getByRole('button', { name: 'Sair' }))
+  expect(await screen.findByText('Login')).toBeTruthy()
+  expect(getAccessToken()).toBeNull()
+  const calls = fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/auth/logout'))
+  expect(calls).toHaveLength(2)
+  expect(JSON.parse(String(calls[0][1]?.body))).toEqual({ refreshToken: 'refresh' })
+})
+
+
+it('informa o limite de tentativas recebido do servidor no login', async () => {
+  render(<MemoryRouter><LoginPage /></MemoryRouter>)
+  fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'maria@example.com' } })
+  fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'senha-incorreta' } })
+  fetchMock.mockResolvedValueOnce(Response.json({ message: 'Muitas tentativas de acesso. Aguarde 15 minutos antes de tentar novamente.' }, { status: 429 }))
+  await userEvent.click(screen.getByRole('button', { name: 'Entrar' }))
+  expect(await screen.findByText(/Muitas tentativas de acesso/)).toBeTruthy()
 })

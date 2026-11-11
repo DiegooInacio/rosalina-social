@@ -327,7 +327,7 @@ class FormsApiIntegrationTest {
     jdbc.update("insert into upgrade_test.catalog_item(id,category,name) values(?, 'AGUA', 'Sim'), (?, 'ESGOTO', 'Não'), (?, 'COLETA_LIXO', 'Coleta pública')", water, sewage, garbage);
     jdbc.update("insert into upgrade_test.socioeconomic_profile(student_id, water_supply_id, sewage_id, garbage_collection_id) values(?, ?, ?, ?)", student, water, sewage, garbage);
     var flyway = org.flywaydb.core.Flyway.configure().dataSource(dataSource).schemas("upgrade_test").defaultSchema("upgrade_test").load();
-    assertEquals(5, flyway.migrate().migrationsExecuted);
+    assertEquals(7, flyway.migrate().migrationsExecuted);
     assertEquals(0, flyway.migrate().migrationsExecuted);
     assertEquals(Boolean.TRUE, jdbc.queryForObject("select has_water_supply from upgrade_test.socioeconomic_profile where student_id = ?", Boolean.class, student));
     assertEquals(Boolean.FALSE, jdbc.queryForObject("select has_sewage from upgrade_test.socioeconomic_profile where student_id = ?", Boolean.class, student));

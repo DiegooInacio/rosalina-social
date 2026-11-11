@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router'
 import { useForm } from 'react-hook-form'
 import { Button } from '../../components/ui/Button'
 import { FormFeedback, type FormMessage } from '../../components/ui/FormFeedback'
 import { FormSection } from '../../components/ui/FormSection'
 import { Input } from '../../components/ui/Input'
 import { ApiError } from '../../lib/api'
-import { getUserRole, getUserSubject } from '../../lib/auth'
+import { clearTokens, markPasswordChanged, getUserRole, getUserSubject } from '../../lib/auth'
 import { changePassword, getProfile, updateProfile, type UserProfile } from './profile.api'
 
 function requestError(error: unknown) {
@@ -45,6 +46,7 @@ function NameForm({ profile, onSaved }: { profile: UserProfile; onSaved: (profil
 type PasswordValues = { currentPassword: string; newPassword: string; confirmation: string }
 
 function PasswordForm({ available }: { available: boolean }) {
+  const navigate = useNavigate()
   const [visible, setVisible] = useState(false)
   const [message, setMessage] = useState<FormMessage | null>(null)
   const { register, handleSubmit, getValues, reset, setError, formState: { errors, isSubmitting } } = useForm<PasswordValues>({
@@ -54,10 +56,14 @@ function PasswordForm({ available }: { available: boolean }) {
     if (!available) return
     setMessage(null)
     try {
+      const subject = getUserSubject()
       await changePassword({ currentPassword, newPassword })
+      if (getUserSubject() !== subject) return
       reset()
       setVisible(false)
-      setMessage({ type: 'success', text: 'Senha alterada com sucesso.' })
+      markPasswordChanged()
+      clearTokens()
+      navigate('/login', { replace: true, state: { passwordChanged: true } })
     } catch (error) {
       if (error instanceof ApiError) {
         for (const field of ['currentPassword', 'newPassword'] as const) {

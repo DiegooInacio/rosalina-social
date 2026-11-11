@@ -44,6 +44,8 @@ export function LoginForm() {
       if (!current() || sessionChanged()) return
       if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
         setError('root', { message: 'E-mail ou senha incorretos.' })
+      } else if (error instanceof ApiError && error.status === 429) {
+        setError('root', { message: error.message })
       } else {
         setError('root', {
           message: 'Não foi possível conectar ao servidor. Tente novamente.',

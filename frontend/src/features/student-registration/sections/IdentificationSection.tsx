@@ -50,6 +50,7 @@ export function IdentificationSection() {
       <div className="grid gap-4 sm:grid-cols-2">
         <Select
           id="status"
+          required
           label="Status"
           options={statusOptions}
           placeholder="Selecione o status"

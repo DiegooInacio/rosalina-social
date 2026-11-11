@@ -1,4 +1,4 @@
-import { clearTokens, getAccessToken, getRefreshToken, isAccessTokenExpired, setTokens } from './auth'
+import { clearTokens, getAccessToken, getRefreshToken, isAccessTokenExpired, setTokens, tokenSubject, withSessionLock } from './auth'
 
 const API_URL = import.meta.env.VITE_API_URL ?? ''
 
@@ -50,9 +50,14 @@ function renewAccessToken(token: string): Promise<string> {
   if (renewing?.token === token) return renewing.request
   if (renewed?.before === token && getAccessToken() === renewed.after) return Promise.resolve(renewed.after)
   if (getAccessToken() !== token) return Promise.reject(new ApiError('Sua sessão mudou. Recarregue a página antes de continuar.', 409))
-  const refreshToken = getRefreshToken()
-  if (!refreshToken) return Promise.reject(expireSession())
-  const operation = (async () => {
+  const operation = withSessionLock(async () => {
+    const current = getAccessToken()
+    if (current !== token) {
+      if (current && tokenSubject(current) === tokenSubject(token)) return current
+      throw new ApiError('Sua sessão mudou. Recarregue a página antes de continuar.', 409)
+    }
+    const refreshToken = getRefreshToken()
+    if (!refreshToken) throw expireSession()
     const response = await request('/api/v1/auth/refresh', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshToken }),
     })
@@ -71,7 +76,7 @@ function renewAccessToken(token: string): Promise<string> {
     setTokens(data.accessToken, data.refreshToken)
     renewed = { before: token, after: data.accessToken }
     return data.accessToken
-  })()
+  })
   renewing = { token, request: operation }
   void operation.finally(() => { if (renewing?.request === operation) renewing = null }).catch(() => {})
   return operation
