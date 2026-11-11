@@ -10,7 +10,9 @@ describe('CIN em rascunhos anteriores', () => {
     })
     expect(data.responsible).toMatchObject({ cpf: '52998224725', documentType: '', documentNumber: '' })
     expect(data.members[0]).toMatchObject({ documentType: 'CPF', documentNumber: '52998224725' })
-    expect(populationSchema.safeParse(data).success).toBe(true)
+    const parsed = populationSchema.safeParse(data)
+    expect(parsed.success).toBe(false)
+    if (!parsed.success) expect(parsed.error.issues.every(issue => issue.path.at(-1)?.toString().endsWith('Id'))).toBe(true)
   })
 
   it('remove somente a repetição do mesmo CPF com máscaras diferentes', () => {

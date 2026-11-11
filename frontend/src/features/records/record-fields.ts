@@ -19,7 +19,7 @@ export const socioeconomicFields: Field[] = [
 export const responsibleFields: Field[] = [
   ['name', 'Nome'], ['socialName', 'Nome social'], ['birthDate', 'Nascimento', 'date'], ['age', 'Idade na data de referência'],
   ['birthSexId', 'Sexo atribuído ao nascimento', 'catalog'], ['racialIdentityId', 'Identificação racial', 'catalog'],
-  ['genderIdentityId', 'Identificação de gênero', 'catalog'], ['sexualOrientationId', 'Orientação sexual', 'catalog'], ['maritalStatusId', 'Estado civil', 'catalog'],
+  ['genderIdentityId', 'Identificação de gênero', 'catalog'], ['sexualOrientationId', 'Orientação sexual', 'catalog'], ['maritalStatusId', 'Estado civil / situação conjugal', 'catalog'],
   ['documentType', 'Tipo de documento'], ['documentNumber', 'Número do documento'], ['cpf', 'CPF', 'cpf'], ['phone', 'Telefone', 'phone'], ['email', 'E-mail'],
   ['birthplace', 'Naturalidade'], ['nationality', 'Nacionalidade'], ['nis', 'NIS'], ['educationId', 'Escolaridade', 'catalog'], ['schoolTypeId', 'Tipo de escola', 'catalog'], ['voterRegistration', 'Título de eleitor'],
 ]

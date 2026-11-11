@@ -46,11 +46,13 @@ class FormsApiIntegrationTest {
   }
   private JsonNode read(ResultActions result) throws Exception { return json.readTree(result.andReturn().getResponse().getContentAsString()); }
   private ObjectNode payload(String source) throws Exception { return (ObjectNode) json.readTree(source); }
-  private ObjectNode minimal() throws Exception { return payload("{\"referenceDate\":\"2026-01-01\",\"responsible\":{\"name\":\"Maria\"}}"); }
+  private ObjectNode minimal() throws Exception { return PopulationChoicesFixture.fill(payload("{\"referenceDate\":\"2026-01-01\",\"responsible\":{\"name\":\"Maria\"}}"), jdbc); }
   private JsonNode create(ObjectNode body, String token) throws Exception {
+    PopulationChoicesFixture.fill(body, jdbc);
     return read(mvc.perform(post(SURVEYS).header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content(body.toString())).andExpect(status().isCreated()));
   }
   private void invalid(ObjectNode body, String token, String field) throws Exception {
+    PopulationChoicesFixture.fill(body, jdbc);
     mvc.perform(post(SURVEYS).header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content(body.toString()))
         .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fields", hasKey(field)));
   }
@@ -224,8 +226,8 @@ class FormsApiIntegrationTest {
     mvc.perform(get("/api/v1/catalogs").header("Authorization", "Bearer " + operator)).andExpect(status().isOk());
     mvc.perform(post("/api/v1/catalogs").header("Authorization", "Bearer " + operator).contentType(MediaType.APPLICATION_JSON)
         .content("{\"category\":\"ATIVIDADE\",\"name\":\"Teste\"}")).andExpect(status().isForbidden());
-    mvc.perform(get(SURVEYS)).andExpect(status().isForbidden());
-    mvc.perform(post(SURVEYS).contentType(MediaType.APPLICATION_JSON).content(minimal().toString())).andExpect(status().isForbidden());
+    mvc.perform(get(SURVEYS)).andExpect(status().isUnauthorized());
+    mvc.perform(post(SURVEYS).contentType(MediaType.APPLICATION_JSON).content(minimal().toString())).andExpect(status().isUnauthorized());
     mvc.perform(get(SURVEYS + "/" + UUID.randomUUID()).header("Authorization", "Bearer " + operator)).andExpect(status().isNotFound());
     var schemas = read(mvc.perform(get("/v3/api-docs")).andExpect(status().isOk())).at("/components/schemas");
     for (String name : new String[]{"StudentRequest", "CatalogRequest", "UserRequest", "StudentStatusRequest", "CatalogStatusRequest", "UserStatusRequest", "PopulationSurveyRequest"})
@@ -316,6 +318,37 @@ class FormsApiIntegrationTest {
     assertEquals(0, jdbc.queryForObject("select count(*) from audit_event where entity_id = ? and metadata like '%Informação sensível%'", Integer.class, id));
   }
 
+  @Test void allSixClassificationsAreRequiredOnCreateAndUpdate() throws Exception {
+    String token = admin(); var created = create(minimal(), token);
+    for (String field : PopulationChoicesFixture.FIELDS.keySet()) {
+      var missing = minimal(); ((ObjectNode) missing.get("responsible")).remove(field);
+      mvc.perform(post(SURVEYS).header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content(missing.toString()))
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fields", hasKey("responsible." + field)));
+      mvc.perform(versionedPut(SURVEYS + "/" + created.get("id").asText(), token).contentType(MediaType.APPLICATION_JSON).content(missing.toString()))
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fields", hasKey("responsible." + field)));
+    }
+  }
+
+  @Test void approvedPopulationOptionsAreAvailableAndExplicitUnknownIsPersisted() throws Exception {
+    String token = operator(admin());
+    String[] categories = {"SEXO_NASCIMENTO", "IDENTIFICACAO_RACIAL", "GENERO", "ORIENTACAO_SEXUAL", "ESTADO_CIVIL", "TIPO_ESCOLA"};
+    for (String category : categories) {
+      var response = mvc.perform(get("/api/v1/catalogs").param("category", category).header("Authorization", "Bearer " + token))
+          .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+      var options = json.readTree(response);
+      assertTrue(options.size() >= 4);
+      assertTrue(java.util.stream.StreamSupport.stream(options.spliterator(), false).anyMatch(item -> item.get("name").asText().equals("Não informado") && item.get("active").asBoolean()));
+    }
+    UUID unknown = jdbc.queryForObject("select id from catalog_item where category='GENERO' and name='Não informado'", UUID.class);
+    var body = minimal();
+    ((com.fasterxml.jackson.databind.node.ObjectNode) body.get("responsible")).put("genderIdentityId", unknown.toString());
+    var created = create(body, token);
+    assertEquals(unknown.toString(), created.at("/responsible/genderIdentityId").asText());
+    var missing = minimal(); ((ObjectNode) missing.get("responsible")).remove("genderIdentityId");
+    mvc.perform(post(SURVEYS).header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content(missing.toString()))
+        .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fields", hasKey("responsible.genderIdentityId")));
+  }
+
   @Test void migrateExistingVersionTwoDatabasePreservesRecordsAndSeedsWithoutDuplicates() throws Exception {
     org.flywaydb.core.Flyway.configure().dataSource(dataSource).schemas("upgrade_test").defaultSchema("upgrade_test").target("2").load().migrate();
     UUID user = UUID.randomUUID(), activity = UUID.randomUUID(), student = UUID.randomUUID();
@@ -326,9 +359,14 @@ class FormsApiIntegrationTest {
     UUID water = UUID.randomUUID(), sewage = UUID.randomUUID(), garbage = UUID.randomUUID();
     jdbc.update("insert into upgrade_test.catalog_item(id,category,name) values(?, 'AGUA', 'Sim'), (?, 'ESGOTO', 'Não'), (?, 'COLETA_LIXO', 'Coleta pública')", water, sewage, garbage);
     jdbc.update("insert into upgrade_test.socioeconomic_profile(student_id, water_supply_id, sewage_id, garbage_collection_id) values(?, ?, ?, ?)", student, water, sewage, garbage);
+    UUID existingGender = UUID.randomUUID();
+    jdbc.update("insert into upgrade_test.catalog_item(id,category,name,active) values(?, 'GENERO', 'MULHER CISGÊNERO', false)", existingGender);
     var flyway = org.flywaydb.core.Flyway.configure().dataSource(dataSource).schemas("upgrade_test").defaultSchema("upgrade_test").load();
-    assertEquals(7, flyway.migrate().migrationsExecuted);
+    assertEquals(8, flyway.migrate().migrationsExecuted);
     assertEquals(0, flyway.migrate().migrationsExecuted);
+    assertEquals(1, jdbc.queryForObject("select count(*) from upgrade_test.catalog_item where category='GENERO' and lower(name)='mulher cisgênero'", Integer.class));
+    assertEquals(false, jdbc.queryForObject("select active from upgrade_test.catalog_item where id=?", Boolean.class, existingGender));
+    assertEquals(6, jdbc.queryForObject("select count(*) from upgrade_test.catalog_item where name='Não informado'", Integer.class));
     assertEquals(Boolean.TRUE, jdbc.queryForObject("select has_water_supply from upgrade_test.socioeconomic_profile where student_id = ?", Boolean.class, student));
     assertEquals(Boolean.FALSE, jdbc.queryForObject("select has_sewage from upgrade_test.socioeconomic_profile where student_id = ?", Boolean.class, student));
     assertNull(jdbc.queryForObject("select has_garbage_collection from upgrade_test.socioeconomic_profile where student_id = ?", Boolean.class, student));

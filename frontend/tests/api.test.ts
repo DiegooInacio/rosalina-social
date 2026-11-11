@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { apiRequest } from '../src/lib/api'
+import { apiRequest, verifySession } from '../src/lib/api'
 import { getAccessToken, getRefreshToken, setTokens } from '../src/lib/auth'
 
 const fetchMock = vi.fn<typeof fetch>()
@@ -124,4 +124,34 @@ it('reaproveita renovação feita por outra aba enquanto aguarda o bloqueio', as
   expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get('Authorization')).toBe(`Bearer ${current}`)
   expect(getRefreshToken()).toBe('refresh-rotacionado-em-outra-aba')
   expect(lock).toHaveBeenCalledOnce()
+})
+
+
+it('verifica sessão revogada sem redirecionar a página pública', async () => {
+  const current = token()
+  setTokens(current, 'refresh-revogado')
+  fetchMock.mockResolvedValue(new Response(null, { status: 401 }))
+  expect(await verifySession(current)).toBeNull()
+  expect(getAccessToken()).toBeNull()
+  expect(redirect).not.toHaveBeenCalled()
+})
+
+it('renova token vencido antes de confirmar a sessão e preserva dados em falha de rede', async () => {
+  const expired = token(true), fresh = token()
+  setTokens(expired, 'refresh-valido')
+  fetchMock.mockResolvedValueOnce(Response.json({ accessToken: fresh, refreshToken: 'rotacionado' }))
+    .mockResolvedValueOnce(Response.json({ id: 'user', email: 'pessoa@test.local', role: 'OPERADOR' }))
+  expect(await verifySession(expired)).toBe(fresh)
+  expect(redirect).not.toHaveBeenCalled()
+  fetchMock.mockRejectedValueOnce(new Error('offline'))
+  await expect(verifySession(fresh)).rejects.toMatchObject({ status: 503 })
+  expect(getAccessToken()).toBe(fresh)
+})
+
+it('sessão revogada antes do vencimento vira expiração de sessão, sem mensagem de falta de permissão', async () => {
+  setTokens(token(), 'refresh-revogado')
+  fetchMock.mockResolvedValue(new Response(null, { status: 401 }))
+  await expect(apiRequest('/api/v1/students')).rejects.toMatchObject({ status: 401, message: expect.stringContaining('Sua sessão expirou') })
+  expect(redirect).toHaveBeenCalledWith('/login')
+  expect(getAccessToken()).toBeNull()
 })

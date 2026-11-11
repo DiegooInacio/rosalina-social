@@ -300,7 +300,8 @@ conta. Para alterar a própria senha, deve usar **Meu perfil**.
 Os cargos existentes são **Administrador** (`ADMIN`) e **Operador** (`OPERADOR`).
 Ambos trabalham com alunos e levantamentos; apenas administradores gerenciam
 usuários e atividades. Alterações de cargo são verificadas pela API a cada
-pedido; para atualizar também o menu da conta alterada, entre novamente.
+pedido. A interface usa o cargo confirmado pela API e atualiza o menu ao voltar
+à aba ou na verificação periódica, sem exigir novo login ou renovação do token.
 
 **Redefinir senha** permite ao administrador definir uma nova senha de outra
 conta, com confirmação. Essa operação encerra as sessões anteriores, incluindo
@@ -336,3 +337,50 @@ um bloqueio entre abas para serializar renovação e logout. Após falha que per
 resposta da renovação, pode ser necessário entrar novamente; a API não aceita
 reutilização do token anterior. O login apresenta a mensagem de excesso de
 tentativas recebida com HTTP 429. A integração exige a API com a migration V9.
+
+## Verificação da sessão ao abrir o site
+
+O cabeçalho só mostra **Minha conta** depois de confirmar a sessão em `/api/v1/me`.
+Tokens vencidos ou recusados são renovados quando possível. Sessões inválidas são
+removidas sem redirecionar quem está na página pública. Falhas de conexão mantêm
+as credenciais e oferecem nova tentativa, sem afirmar que a conta está conectada.
+A área privada aguarda a verificação inicial. Renovar a mesma conta ou falhar uma
+consulta temporária não desmonta um formulário já aberto. A verificação se repete
+ao voltar à aba e periodicamente enquanto a página estiver aberta.
+
+
+## Opções do levantamento populacional
+
+A API com a migration V10 oferece as 41 opções aprovadas nas seis categorias
+antes vazias. O select de catálogo vazio mostra **Selecione**, sem oferecê-lo na
+lista. **Não informado** é uma resposta explícita, armazenada pelo UUID do item;
+**Prefere não informar** é outra resposta, disponível nos quatro campos de
+sexo, raça, gênero e orientação sexual. Limpar o campo remove a resposta:
+o payload final omite o ID, enquanto o rascunho mantém a string vazia.
+Estado civil passa a aparecer como **Estado civil / situação conjugal**, inclusive
+nas fichas e comparações, pois as alternativas incluem União estável.
+
+
+## Conclusão com classificações preenchidas
+
+Para concluir ou salvar a edição do levantamento, selecione sexo ao nascimento,
+raça, gênero, orientação sexual, estado civil / situação conjugal e tipo de
+escola. Cada campo aceita Não informado; os quatro primeiros também aceitam
+Prefere não informar. Os seis campos não oferecem o ícone de limpar seleção.
+Rascunhos continuam aceitando campos vazios, inclusive ao salvar manualmente ou
+continuar depois. Escolaridade e os demais campos opcionais mantêm a limpeza.
+
+
+## Sessão inválida e mudança de cargo
+
+A API retorna 401 para autenticação ausente, inválida, expirada ou revogada;
+403 indica uma conta autenticada sem permissão para a ação. Ao receber 401,
+o cliente tenta renovar uma vez; se a renovação falhar por autenticação, remove
+os tokens e retorna ao login, preservando rascunhos. Um 403 não força renovação
+nem encerra a sessão.
+
+O cargo recebido de `/api/v1/me` tem prioridade sobre o cargo do token para
+menus, páginas administrativas e acessos de gerenciamento. A confirmação fica
+somente em memória e é vinculada ao token atual; respostas antigas não atualizam
+outra conta. As telas acompanham alterações de cargo sem desmontar formulários
+da mesma conta. Recarregar a página exige nova verificação antes da área privada.

@@ -23,7 +23,7 @@ export const CatalogSelect = forwardRef<HTMLSelectElement, Props>(function Catal
       ref={ref}
       value={value ?? ''}
       options={catalog.items.map((item) => ({ value: item.id, label: item.name }))}
-      placeholder={catalog.isLoading ? 'Carregando...' : catalog.hasError ? 'Falha ao carregar opções' : catalog.items.length === 0 ? 'Nenhuma opção cadastrada' : 'Não informado'}
+      placeholder={catalog.isLoading ? 'Carregando...' : catalog.hasError ? 'Falha ao carregar opções' : catalog.items.length === 0 ? 'Nenhuma opção cadastrada' : 'Selecione'}
       disabled={props.disabled || catalog.isLoading || catalog.hasError}
       error={error ?? (catalog.hasError ? 'Não foi possível carregar as opções.' : undefined)}
     />

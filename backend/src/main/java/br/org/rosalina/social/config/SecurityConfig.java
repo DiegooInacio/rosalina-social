@@ -23,6 +23,19 @@ public class SecurityConfig {
 
   @Bean SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwt, Environment env) throws Exception {
     return http.csrf(c -> c.disable()).cors(c -> {})
+        .exceptionHandling(errors -> errors
+            .authenticationEntryPoint((request, response, error) -> {
+              if (!request.getRequestURI().startsWith("/api/")) { response.sendError(403); return; }
+              response.setStatus(401);
+              response.setHeader("WWW-Authenticate", "Bearer");
+              response.setContentType("application/json;charset=UTF-8");
+              response.getWriter().write("{\"status\":401,\"code\":\"UNAUTHORIZED\",\"message\":\"Sessão inválida ou expirada. Entre novamente.\",\"fields\":{}}");
+            })
+            .accessDeniedHandler((request, response, error) -> {
+              response.setStatus(403);
+              response.setContentType("application/json;charset=UTF-8");
+              response.getWriter().write("{\"status\":403,\"code\":\"FORBIDDEN\",\"message\":\"Sua conta não tem permissão para esta ação.\",\"fields\":{}}");
+            }))
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(a -> {
           // Somente a interface é pública. Os dados continuam protegidos na API.

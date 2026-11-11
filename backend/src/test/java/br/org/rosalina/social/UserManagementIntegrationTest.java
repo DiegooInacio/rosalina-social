@@ -79,7 +79,7 @@ class UserManagementIntegrationTest {
     String next = "  nova-senha-123  ";
     send(put("/api/v1/users/"+operator.getId()+"/password"),Map.of("newPassword",next)).andExpect(status().isNoContent());
     assertTrue(encoder.matches(next,users.findById(operator.getId()).orElseThrow().getPasswordHash()));
-    mvc.perform(get("/api/v1/me").header("Authorization","Bearer "+oldAccess)).andExpect(status().isForbidden());
+    mvc.perform(get("/api/v1/me").header("Authorization","Bearer "+oldAccess)).andExpect(status().isUnauthorized());
     send(post("/api/v1/auth/refresh"),Map.of("refreshToken",oldRefresh)).andExpect(status().isUnauthorized());
     send(post("/api/v1/auth/login"),Map.of("email",operator.getEmail(),"password","senha-atual-123")).andExpect(status().isUnauthorized());
     String response = send(post("/api/v1/auth/login"),Map.of("email",operator.getEmail(),"password",next)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
@@ -93,18 +93,18 @@ class UserManagementIntegrationTest {
     String access = jwt.access(operator), refresh = jwt.refresh(operator);
     for (boolean active : new boolean[]{false,true}) {
       send(patch("/api/v1/users/"+operator.getId()),Map.of("active",active)).andExpect(status().isOk());
-      mvc.perform(get("/api/v1/me").header("Authorization","Bearer "+access)).andExpect(status().isForbidden());
+      mvc.perform(get("/api/v1/me").header("Authorization","Bearer "+access)).andExpect(status().isUnauthorized());
       send(post("/api/v1/auth/refresh"),Map.of("refreshToken",refresh)).andExpect(status().isUnauthorized());
     }
     send(post("/api/v1/auth/login"),Map.of("email",operator.getEmail(),"password","senha-atual-123")).andExpect(status().isOk());
   }
   @Test void operatorsAndAnonymousCannotManageUsers() throws Exception {
     token = jwt.access(operator);
-    send(get("/api/v1/users"),Map.of()).andExpect(status().isForbidden());
+    send(get("/api/v1/users"),Map.of()).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("FORBIDDEN"));
     send(post("/api/v1/users"),Map.of()).andExpect(status().isForbidden());
     send(put("/api/v1/users/"+admin.getId()),Map.of("name","Pessoa","role","ADMIN")).andExpect(status().isForbidden());
     send(patch("/api/v1/users/"+admin.getId()),Map.of("active",false)).andExpect(status().isForbidden());
     send(put("/api/v1/users/"+admin.getId()+"/password"),Map.of("newPassword","outra-senha-123")).andExpect(status().isForbidden());
-    mvc.perform(get("/api/v1/users")).andExpect(status().isForbidden());
+    mvc.perform(get("/api/v1/users")).andExpect(status().isUnauthorized());
   }
 }

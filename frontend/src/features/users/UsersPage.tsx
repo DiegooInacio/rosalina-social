@@ -7,8 +7,8 @@ import { Select } from '../../components/ui/Select'
 import { FormSection } from '../../components/ui/FormSection'
 import { FormFeedback, type FormMessage } from '../../components/ui/FormFeedback'
 import { ApiError } from '../../lib/api'
-import { getUserRole, getUserSubject } from '../../lib/auth'
-import { useSessionToken } from '../auth/useSessionToken'
+import { getUserSubject } from '../../lib/auth'
+import { useUserRole } from '../auth/useUserRole'
 import { listUsers, resetUserPassword, setUserStatus, type ManagedUser, type UserRole } from './users.api'
 
 const roleName = (role: UserRole) => role === 'ADMIN' ? 'Administrador' : 'Operador'
@@ -38,8 +38,8 @@ function ResetPasswordForm({ user, onDone, onCancel }: { user: ManagedUser; onDo
 }
 
 export function UsersPage() {
-  useSessionToken()
-  return getUserRole() === 'ADMIN' ? <UserManagement /> : <Navigate to="/app" replace />
+  const role = useUserRole()
+  return role === 'ADMIN' ? <UserManagement /> : <Navigate to="/app" replace />
 }
 
 function UserManagement() {

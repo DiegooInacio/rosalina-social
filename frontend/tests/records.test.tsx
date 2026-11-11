@@ -8,7 +8,7 @@ import { RecordDetailsPage } from '../src/features/records/RecordDetailsPage'
 import { AppRoutes } from '../src/app/router'
 import { displayValue } from '../src/features/records/record-display'
 
-vi.mock('../src/lib/api', async (original) => ({ ...await original<typeof import('../src/lib/api')>(), apiRequest: vi.fn() }))
+vi.mock('../src/lib/api', async (original) => ({ ...await original<typeof import('../src/lib/api')>(), apiRequest: vi.fn(), verifySession: vi.fn(async (token: string) => token) }))
 const request = vi.mocked(apiRequest)
 const student = { id: 'student-1', name: 'Ana Silva', status: 'ATIVO', cpf: '***.***.247-**', activity: 'Capoeira', birthDate: '2015-05-20' }
 const survey = { id: 'survey-1', responsibleName: 'Maria Silva', referenceDate: '2026-01-01', updatedAt: '2026-01-02T12:00:00Z' }
@@ -154,7 +154,7 @@ it('trata cadastro inexistente com volta para a lista', async () => {
 it('integra as consultas no menu e na visão geral para usuário autenticado', async () => {
   localStorage.setItem('rosalina.accessToken', 'session')
   render(<MemoryRouter initialEntries={['/app']}><AppRoutes /></MemoryRouter>)
-  expect(screen.getAllByRole('link', { name: /^Alunos cadastrados/ })).toHaveLength(2)
+  await waitFor(() => expect(screen.getAllByRole('link', { name: /^Alunos cadastrados/ })).toHaveLength(2))
   expect(screen.getAllByRole('link', { name: /^Levantamentos cadastrados/ })).toHaveLength(2)
   request.mockResolvedValue(page([student]))
   await userEvent.click(screen.getAllByRole('link', { name: /^Alunos cadastrados/ })[0])

@@ -1,4 +1,4 @@
-import { useSessionToken } from '../auth/useSessionToken'
+import { useUserRole } from '../auth/useUserRole'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate } from 'react-router'
 import { Button } from '../../components/ui/Button'
@@ -7,12 +7,11 @@ import { FormSection } from '../../components/ui/FormSection'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { ApiError } from '../../lib/api'
-import { getUserRole } from '../../lib/auth'
 import { createActivity, listCatalog, renameActivity, setActivityStatus, type CatalogItem } from '../catalogs/catalog.api'
 
 export function ActivitiesPage() {
-  useSessionToken()
-  return getUserRole() === 'ADMIN' ? <ActivityManagement /> : <Navigate to="/app" replace />
+  const role = useUserRole()
+  return role === 'ADMIN' ? <ActivityManagement /> : <Navigate to="/app" replace />
 }
 
 function ActivityManagement() {

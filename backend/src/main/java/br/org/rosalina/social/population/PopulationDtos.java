@@ -42,12 +42,12 @@ public final class PopulationDtos {
   public record Responsible(
       @NotBlank @Size(max = 150) String name,
       @Min(0) Integer age, @Size(max = 150) String socialName,
-      UUID birthSexId, UUID racialIdentityId, LocalDate birthDate,
-      UUID genderIdentityId, UUID sexualOrientationId, UUID maritalStatusId,
+      @NotNull(message = "Selecione uma opção, inclusive Não informado quando necessário.") UUID birthSexId, @NotNull(message = "Selecione uma opção, inclusive Não informado quando necessário.") UUID racialIdentityId, LocalDate birthDate,
+      @NotNull(message = "Selecione uma opção, inclusive Não informado quando necessário.") UUID genderIdentityId, @NotNull(message = "Selecione uma opção, inclusive Não informado quando necessário.") UUID sexualOrientationId, @NotNull(message = "Selecione uma opção, inclusive Não informado quando necessário.") UUID maritalStatusId,
       DocumentType documentType, @Size(max = 30) String documentNumber,
       @Size(max = 30) String cpf, @Size(max = 20) String phone,
       @Size(max = 150) String birthplace, @Size(max = 100) String nationality,
-      @Size(max = 40) String nis, UUID educationId, UUID schoolTypeId,
+      @Size(max = 40) String nis, UUID educationId, @NotNull(message = "Selecione uma opção, inclusive Não informado quando necessário.") UUID schoolTypeId,
       @Email @Size(max = 254) String email, @Size(max = 30) String voterRegistration) {}
 
   @Schema(name = "PopulationAddress")

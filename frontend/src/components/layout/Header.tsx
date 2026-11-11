@@ -1,4 +1,4 @@
-import { useSessionToken } from '../../features/auth/useSessionToken'
+import { useVerifiedSession } from '../../features/auth/useVerifiedSession'
 import { Link, useNavigate } from 'react-router'
 import { useEffect, useRef, useState } from 'react'
 import { getUserSubject } from '../../lib/auth'
@@ -7,7 +7,8 @@ import { ThemeSelector } from '../../features/theme/ThemeSelector'
 
 export function Header() {
   const navigate = useNavigate()
-  const isLoggedIn = Boolean(useSessionToken())
+  const session = useVerifiedSession()
+  const isLoggedIn = session.status === 'authenticated'
   const [open, setOpen] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   const [logoutError, setLogoutError] = useState('')
@@ -48,7 +49,7 @@ export function Header() {
         </Link>
         <div className="flex flex-wrap items-center gap-3">
         <ThemeSelector />
-        {isLoggedIn ? (
+        {session.status === 'checking' ? <p role="status" className="text-sm text-secondary">Verificando sessão...</p> : session.status === 'error' ? <div className="text-sm text-secondary"><span role="status">Sessão não verificada.</span> <button type="button" onClick={session.retry} className="min-h-11 px-2 font-semibold text-link underline">Tentar novamente</button></div> : isLoggedIn ? (
           <div ref={accountRef} className="relative" onBlur={(event) => {
             if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false)
           }}>

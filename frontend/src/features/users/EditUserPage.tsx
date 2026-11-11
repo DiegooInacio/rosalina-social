@@ -2,15 +2,14 @@ import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router'
 import { Button } from '../../components/ui/Button'
 import { FormSection } from '../../components/ui/FormSection'
-import { getUserRole } from '../../lib/auth'
-import { useSessionToken } from '../auth/useSessionToken'
+import { useUserRole } from '../auth/useUserRole'
 import { AccountForm } from './AccountForm'
 import { listUsers, type ManagedUser } from './users.api'
 
 export function EditUserPage() {
-  useSessionToken()
+  const role = useUserRole()
   const { id } = useParams()
-  return getUserRole() === 'ADMIN' ? <UserEditor key={id} id={id} /> : <Navigate to="/app" replace />
+  return role === 'ADMIN' ? <UserEditor key={id} id={id} /> : <Navigate to="/app" replace />
 }
 
 function UserEditor({ id }: { id?: string }) {

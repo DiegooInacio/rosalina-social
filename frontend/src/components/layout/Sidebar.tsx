@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useSessionToken } from '../../features/auth/useSessionToken'
 import { NavLink, useLocation } from 'react-router'
-import { getUserRole } from '../../lib/auth'
+import { useUserRole } from '../../features/auth/useUserRole'
 
 const links = [
   { to: '/app', label: 'Visão geral', end: true },
@@ -14,6 +14,7 @@ const links = [
 
 export function Sidebar() {
   useSessionToken()
+  const role = useUserRole()
   const location = useLocation()
   const [openedAt, setOpenedAt] = useState<string | null>(null)
   const open = openedAt === location.key
@@ -42,7 +43,7 @@ export function Sidebar() {
 
   const visibleLinks = [
     ...links,
-    ...(getUserRole() === 'ADMIN'
+    ...(role === 'ADMIN'
       ? [{ to: '/app/atividades', label: 'Atividades' }, { to: '/app/usuarios', label: 'Usuários e acessos' }]
       : []),
     { to: '/app/perfil', label: 'Meu perfil' },

@@ -42,7 +42,8 @@ Senha atual incorreta retorna `fields.currentPassword`, sem invalidar a sessão.
 As alterações são transacionais e auditadas sem registrar nomes ou senhas nos
 eventos. A troca de senha invalida os tokens emitidos anteriormente. Os novos acessos ficam sujeitos à validade existente e à verificação de conta ativa.
 As rotas seguem a segurança atual da API: requisições sem autenticação válida
-ou de contas inativas recebem 403.
+ou de contas inativas recebem 401. Contas autenticadas sem o cargo exigido
+recebem 403, sem encerrar a sessão.
 
 ## Testes
 

@@ -9,6 +9,7 @@ export const states = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA
 const text = (max: number) => z.string().trim().max(max, `Informe no máximo ${max} caracteres.`)
 const date = optional(isValidDate, 'Informe uma data válida (dd/mm/aaaa).')
 const phone = phoneField()
+const requiredClassification = optionalCatalogId.refine(value => value !== '', 'Selecione uma opção, inclusive Não informado quando necessário.')
 export const memberSchema = z.object({
   id: z.string().optional(),
   name: text(150).min(1, 'Informe o nome do integrante.'),
@@ -32,12 +33,12 @@ export const populationSchema = z.object({
   referenceDate: z.string().refine(isValidDate, 'Informe uma data válida (dd/mm/aaaa).'),
   responsible: z.object({
     name: text(150).min(1, 'Informe o nome do responsável.'), age: optionalInteger, socialName: text(150),
-    birthSexId: optionalCatalogId, racialIdentityId: optionalCatalogId, birthDate: date,
-    genderIdentityId: optionalCatalogId, sexualOrientationId: optionalCatalogId, maritalStatusId: optionalCatalogId,
+    birthSexId: requiredClassification, racialIdentityId: requiredClassification, birthDate: date,
+    genderIdentityId: requiredClassification, sexualOrientationId: requiredClassification, maritalStatusId: requiredClassification,
     documentType: z.enum(['', 'RG', 'CIN']), documentNumber: text(30),
     cpf: optional(isValidCpf, 'Informe um CPF válido.'), phone, birthplace: text(150), nationality: text(100),
     nis: z.string().trim().refine((value) => value === '' || /^\d{1,20}$/.test(value), 'Informe até 20 dígitos para o NIS.'),
-    educationId: optionalCatalogId, schoolTypeId: optionalCatalogId,
+    educationId: optionalCatalogId, schoolTypeId: requiredClassification,
     email: text(254).refine((value) => value === '' || isValidEmail(value), 'Informe um e-mail válido.'), voterRegistration: text(30),
   }),
   address: z.object({

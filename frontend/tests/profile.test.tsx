@@ -129,7 +129,7 @@ it('abre o perfil pelo menu, fecha com Escape e encerra a sessão', async () => 
     <Route path="/app/perfil" element={<ProfilePage />} />
     <Route path="/login" element={<p>Login</p>} />
   </Routes></MemoryRouter>)
-  const toggle = screen.getByRole('button', { name: /Minha conta/ })
+  const toggle = await screen.findByRole('button', { name: /Minha conta/ })
   await userEvent.click(toggle)
   await userEvent.keyboard('{Escape}')
   expect(toggle.getAttribute('aria-expanded')).toBe('false')
@@ -146,7 +146,7 @@ it('abre o perfil pelo menu, fecha com Escape e encerra a sessão', async () => 
 it('atualiza o cabeçalho quando a sessão é encerrada fora do menu', async () => {
   render(<MemoryRouter><Header /></MemoryRouter>)
   expect(screen.getByRole('combobox', { name: 'Tema' })).toBeTruthy()
-  expect(screen.getByRole('button', { name: /Minha conta/ })).toBeTruthy()
+  expect(await screen.findByRole('button', { name: /Minha conta/ })).toBeTruthy()
   await act(async () => { clearTokens() })
   expect(screen.getByRole('link', { name: 'Entrar' })).toBeTruthy()
   expect(screen.queryByRole('button', { name: /Minha conta/ })).toBeNull()
@@ -155,7 +155,7 @@ it('atualiza o cabeçalho quando a sessão é encerrada fora do menu', async () 
 
 it('aguarda revogação no servidor e preserva sessão para tentar sair novamente se a rede falhar', async () => {
   render(<MemoryRouter initialEntries={['/app']}><Header /><Routes><Route path="/app" element={<p>Painel</p>} /><Route path="/login" element={<p>Login</p>} /></Routes></MemoryRouter>)
-  await userEvent.click(screen.getByRole('button', { name: /Minha conta/ }))
+  await userEvent.click(await screen.findByRole('button', { name: /Minha conta/ }))
   fetchMock.mockRejectedValueOnce(new Error('offline'))
   await userEvent.click(screen.getByRole('button', { name: 'Sair' }))
   expect(await screen.findByText(/Não foi possível encerrar a sessão no servidor/)).toBeTruthy()
@@ -176,4 +176,23 @@ it('informa o limite de tentativas recebido do servidor no login', async () => {
   fetchMock.mockResolvedValueOnce(Response.json({ message: 'Muitas tentativas de acesso. Aguarde 15 minutos antes de tentar novamente.' }, { status: 429 }))
   await userEvent.click(screen.getByRole('button', { name: 'Entrar' }))
   expect(await screen.findByText(/Muitas tentativas de acesso/)).toBeTruthy()
+})
+
+
+it('não mostra Minha conta antes de validar um token salvo e remove sessão revogada', async () => {
+  fetchMock.mockResolvedValue(new Response(null, { status: 401 }))
+  render(<MemoryRouter><Header /></MemoryRouter>)
+  expect(screen.queryByRole('button', { name: /Minha conta/ })).toBeNull()
+  expect(await screen.findByRole('link', { name: 'Entrar' })).toBeTruthy()
+  expect(getAccessToken()).toBeNull()
+})
+
+it('preserva credenciais quando o servidor está indisponível e permite verificar novamente', async () => {
+  fetchMock.mockRejectedValueOnce(new Error('offline'))
+  render(<MemoryRouter><Header /></MemoryRouter>)
+  expect(await screen.findByText('Sessão não verificada.')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: /Minha conta/ })).toBeNull()
+  expect(getAccessToken()).not.toBeNull()
+  await userEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }))
+  expect(await screen.findByRole('button', { name: /Minha conta/ })).toBeTruthy()
 })

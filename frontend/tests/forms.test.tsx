@@ -1,3 +1,4 @@
+import { selectPopulationChoices } from './population-choices.fixture'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
@@ -52,6 +53,11 @@ function fill(label: string | RegExp, value: string) {
   } else {
     fireEvent.change(screen.getByLabelText(label), { target: { value } })
   }
+}
+
+function fillPopulation(name: string) {
+  fill('Nome (obrigatório)', name)
+  selectPopulationChoices()
 }
 
 function fillStudent() {
@@ -138,7 +144,7 @@ describe.each(['student', 'population'] as const)('RF15–RF18: %s', (kind) => {
       fillStudent()
       vi.mocked(createStudent).mockReturnValue(pending)
     } else {
-      fill('Nome (obrigatório)', 'Responsável Teste')
+      fillPopulation('Responsável Teste')
       vi.mocked(createPopulationSurvey).mockReturnValue(pending)
     }
     await userEvent.dblClick(screen.getByRole('button', { name: submitLabel }))
@@ -161,7 +167,7 @@ describe.each(['student', 'population'] as const)('RF15–RF18: %s', (kind) => {
       fillStudent()
       vi.mocked(createStudent).mockRejectedValueOnce(new TypeError('Failed to fetch')).mockResolvedValueOnce({})
     } else {
-      fill('Nome (obrigatório)', 'Responsável Teste')
+      fillPopulation('Responsável Teste')
       vi.mocked(createPopulationSurvey).mockRejectedValueOnce(new TypeError('Failed to fetch')).mockResolvedValueOnce({ id: 'saved', financialSummary: { memberCount: 0, totalIncome: null, perCapitaIncome: null, incomeComplete: false } })
     }
     await userEvent.click(screen.getByRole('button', { name: submitLabel }))
@@ -195,7 +201,7 @@ it('mostra erros da API junto ao CPF do aluno e ao familiar correto', async () =
 
 it('mostra erros da API junto ao integrante sem apagar os demais', async () => {
   showForm('population')
-  fill('Nome (obrigatório)', 'Responsável Teste')
+  fillPopulation('Responsável Teste')
   await userEvent.click(screen.getByRole('button', { name: 'Adicionar responsável à família' }))
   await userEvent.click(screen.getByRole('button', { name: 'Adicionar integrante' }))
   fireEvent.change(screen.getAllByLabelText('Nome completo (obrigatório)')[1], { target: { value: 'Outro integrante' } })
@@ -209,7 +215,7 @@ it('mostra erros da API junto ao integrante sem apagar os demais', async () => {
 
 it('atualiza campos condicionais sem apagar campos independentes antes do envio', async () => {
   showForm('population')
-  fill('Nome (obrigatório)', 'Responsável Teste')
+  fillPopulation('Responsável Teste')
   fill('Trabalha', 'true')
   fill('Em que trabalha', 'Costura')
   fill('Recebe algum benefício', 'true')
@@ -252,7 +258,7 @@ it('limpa somente os detalhes de patrimônio dependentes da resposta alterada', 
 
 it('distingue Não de Não informado e mantém autorizações independentes nas opções visíveis', async () => {
   showForm('population')
-  fill('Nome (obrigatório)', 'Responsável Teste')
+  fillPopulation('Responsável Teste')
   const work = within(screen.getByRole('group', { name: 'Trabalha' }))
   expect(work.getByRole('radio', { name: 'Não informado', checked: true })).toBeTruthy()
   await userEvent.click(work.getByRole('radio', { name: 'Sim' }))
@@ -299,7 +305,7 @@ it('aceita a CIN no CPF do aluno e dos familiares sem exigir RG', async () => {
 
 it('envia CPF/CIN uma vez por pessoa e permite preencher ou apagar o RG antigo', async () => {
   showForm('population')
-  fill('Nome (obrigatório)', 'Responsável Teste')
+  fillPopulation('Responsável Teste')
   fill('CPF', '52998224725')
   fill('RG antigo (opcional)', 'AB-123')
   await userEvent.click(screen.getByRole('button', { name: 'Adicionar responsável à família' }))
@@ -364,7 +370,7 @@ describe.each(['student', 'population'] as const)('consulta de CEP: %s', (kind) 
   function validForm() {
     showForm(kind)
     if (kind === 'student') fillStudent()
-    else fill('Nome (obrigatório)', 'Responsável Teste')
+    else fillPopulation('Responsável Teste')
   }
 
   it('consulta ao completar 8 dígitos e preenche os campos de endereço', async () => {
@@ -577,12 +583,12 @@ it('formata todos os valores do aluno e envia números corretos, distinguindo ze
 
 it('sincroniza identificação do responsável sem alterar renda do integrante', async () => {
   showForm('population')
-  fill('Nome (obrigatório)', 'Maria')
+  fillPopulation('Maria')
   fill('CPF', '52998224725')
   await userEvent.click(screen.getByRole('button', { name: 'Adicionar responsável à família' }))
   const member = within(screen.getByRole('group', { name: 'Integrante 1' }))
   fireEvent.change(member.getByLabelText('Renda mensal (R$)'), { target: { value: '123456' } })
-  fill('Nome (obrigatório)', 'Maria atualizada')
+  fillPopulation('Maria atualizada')
   fireEvent.change(screen.getAllByLabelText('CPF')[0], { target: { value: '11144477735' } })
   await waitFor(() => expect((member.getByLabelText('Nome completo (obrigatório)') as HTMLInputElement).value).toBe('Maria atualizada'))
   expect((member.getByLabelText('CPF') as HTMLInputElement).value).toBe('111.444.777-35')
@@ -596,7 +602,7 @@ it('sincroniza identificação do responsável sem alterar renda do integrante',
 it.each(['student', 'population'] as const)('oferece acesso à ficha depois de salvar %s', async (kind) => {
   showForm(kind)
   if (kind === 'student') fillStudent()
-  else fill('Nome (obrigatório)', 'Maria')
+  else fillPopulation('Maria')
   await userEvent.click(screen.getByRole('button', { name: kind === 'student' ? 'Salvar cadastro' : 'Salvar levantamento' }))
   expect((await screen.findByRole('link', { name: 'Ver ficha do cadastro salvo' })).getAttribute('href')).toBe(`/app/${kind === 'student' ? 'alunos' : 'levantamentos'}/saved`)
 })

@@ -1,5 +1,7 @@
 const ACCESS_KEY = 'rosalina.accessToken'
 const REFRESH_KEY = 'rosalina.refreshToken'
+type UserRole = 'ADMIN' | 'OPERADOR'
+let confirmedRole: { token: string; role: UserRole } | null = null
 
 export function getAccessToken() {
   return localStorage.getItem(ACCESS_KEY)
@@ -18,12 +20,14 @@ export function isAccessTokenExpired(token: string) {
 }
 
 export function setTokens(accessToken: string, refreshToken: string) {
+  confirmedRole = null;
   localStorage.setItem(ACCESS_KEY, accessToken)
   localStorage.setItem(REFRESH_KEY, refreshToken)
   window.dispatchEvent?.(new Event('rosalina:session'))
 }
 
 export function clearTokens() {
+  confirmedRole = null;
   localStorage.removeItem(ACCESS_KEY)
   localStorage.removeItem(REFRESH_KEY)
   window.dispatchEvent?.(new Event('rosalina:session'))
@@ -55,6 +59,7 @@ export function getUserRole(): 'ADMIN' | 'OPERADOR' | null {
     // Um acesso vencido com refresh disponível ainda pode renovar a sessão.
     // A autorização efetiva continua sendo feita pela API em cada pedido.
     if (claims.type !== 'access' || typeof claims.exp !== 'number' || (claims.exp * 1000 <= Date.now() && !getRefreshToken())) return null
+    if (confirmedRole?.token === token) return confirmedRole.role
     return claims.role === 'ADMIN' || claims.role === 'OPERADOR' ? claims.role : null
   } catch {
     return null
@@ -66,3 +71,11 @@ let passwordChangedNotice = false
 export function markPasswordChanged() { passwordChangedNotice = true }
 export function hasPasswordChangedNotice() { return passwordChangedNotice }
 export function clearPasswordChangedNotice() { passwordChangedNotice = false }
+
+
+export function confirmUserRole(token: string, role: UserRole) {
+  if (getAccessToken() !== token) return
+  const previous = getUserRole()
+  confirmedRole = { token, role }
+  if (previous !== role) window.dispatchEvent?.(new Event('rosalina:profile'))
+}

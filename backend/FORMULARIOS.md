@@ -75,13 +75,22 @@ junto da versão do rascunho:
 {
   "version": 0,
   "submission": {
-    "responsible": {"name": "Maria Silva"},
+    "responsible": {
+      "name": "Maria Silva",
+      "birthSexId": "UUID-SEXO-NASCIMENTO",
+      "racialIdentityId": "UUID-IDENTIFICACAO-RACIAL",
+      "genderIdentityId": "UUID-GENERO",
+      "sexualOrientationId": "UUID-ORIENTACAO-SEXUAL",
+      "maritalStatusId": "UUID-ESTADO-CIVIL",
+      "schoolTypeId": "UUID-TIPO-ESCOLA"
+    },
     "authorizations": {"imageAndSound": false, "personalData": true}
   }
 }
 ```
 
-Esse exemplo conclui um rascunho `POPULATION_SURVEY`. Para `STUDENT`, `submission`
+Substitua os valores UUID pelas opções reais retornadas em `/catalogs`, inclusive
+Não informado quando apropriado. Esse exemplo conclui um rascunho `POPULATION_SURVEY`. Para `STUDENT`, `submission`
 deve respeitar `StudentRequest`, incluindo atividade, nascimento e responsável.
 As validações de formato, obrigatoriedade e negócio são as mesmas dos endpoints
 normais; o rascunho não serve para contorná-las. Erros de campos da conclusão
@@ -151,13 +160,27 @@ A listagem mantém a ocultação parcial do CPF; a consulta detalhada retorna o 
 A listagem aceita `name`, `cpf`, `page`, `size` e `sort` (padrão `responsibleName`).
 `name` busca trecho do nome, sem distinguir maiúsculas; `cpf` busca valor exato e aceita máscara.
 
-Cadastro mínimo:
+Cadastro mínimo (substitua os UUIDs pelos identificadores reais dos catálogos):
 
 ```json
-{"responsible": {"name": "Maria Silva"}}
+{
+  "responsible": {
+    "name": "Maria Silva",
+    "birthSexId": "UUID-SEXO-NASCIMENTO",
+    "racialIdentityId": "UUID-IDENTIFICACAO-RACIAL",
+    "genderIdentityId": "UUID-GENERO",
+    "sexualOrientationId": "UUID-ORIENTACAO-SEXUAL",
+    "maritalStatusId": "UUID-ESTADO-CIVIL",
+    "schoolTypeId": "UUID-TIPO-ESCOLA"
+  }
+}
 ```
 
-Somente `responsible` e seu `name` são obrigatórios. As seções opcionais são:
+`responsible`, seu `name` e as seis classificações `birthSexId`, `racialIdentityId`,
+`genderIdentityId`, `sexualOrientationId`, `maritalStatusId` e `schoolTypeId` são
+obrigatórios na criação, edição e conclusão. Escolher Não informado é válido;
+enviar UUID de categoria incorreta ou opção inativa continua inválido. Rascunhos
+aceitam essas classificações vazias e só são validados ao concluir. As seções opcionais são:
 
 | Seção | Campos |
 |---|---|
@@ -281,8 +304,12 @@ Consultar `GET /catalogs?category=...`; usar somente itens `active: true` no fro
 Referências enviadas são verificadas quanto à categoria e à situação ativa.
 
 Categorias adicionais: `SEXO_NASCIMENTO`, `IDENTIFICACAO_RACIAL`, `GENERO`,
-`ORIENTACAO_SEXUAL`, `ESTADO_CIVIL`, `TIPO_ESCOLA`. Elas começam sem opções:
-a organização deve cadastrar as alternativas aprovadas. Escolaridade reutiliza
+`ORIENTACAO_SEXUAL`, `ESTADO_CIVIL`, `TIPO_ESCOLA`. A migration V10 cadastra
+as alternativas aprovadas, incluindo Não informado nas seis categorias e
+Prefere não informar em sexo, raça, gênero e orientação sexual. Estado civil
+inclui União estável e aparece na interface como Estado civil / situação conjugal.
+Itens existentes são preservados, inclusive os inativos, sem duplicação por
+diferença de maiúsculas ou espaços nas extremidades. Escolaridade reutiliza
 `ESCOLARIDADE`. Saneamento do aluno usa respostas Sim/Não, sem depender de
 catálogos. As categorias legadas `AGUA`, `ESGOTO` e `COLETA_LIXO` são preservadas
 para referências históricas.
@@ -348,3 +375,25 @@ existente; requisições concorrentes são resolvidas pela restrição única do
 Um identificador de outra conta retorna 409 sem expor seus dados; reutilização
 entre tipos de formulário é rejeitada. Clientes antigos que omitem `requestId`
 continuam recebendo um UUID gerado pelo servidor.
+
+
+### Vazio, Não informado e Prefere não informar
+
+Um campo opcional vazio é omitido do payload final pelo frontend e normalizado
+como ausência de classificação pela API. Não informado é uma opção explícita do
+catálogo, enviada e persistida pelo seu UUID, como qualquer outra alternativa.
+Prefere não informar registra uma recusa explícita e possui outro UUID.
+Rascunhos preservam o estado bruto: vazio permanece string vazia e escolhas
+explícitas mantêm o identificador. A V10 não classifica registros antigos nem
+substitui valores vazios por Não informado.
+
+
+### Classificações obrigatórias na conclusão
+
+As seis classificações recém-preenchidas exigem resposta explícita, inclusive
+Não informado ou Prefere não informar quando disponível. Escolaridade continua
+opcional. Isso não altera as tabelas nem preenche registros antigos; consultar
+cadastros antigos continua possível. Para salvar uma edição antiga, complete as
+classificações faltantes. A regra também vale para o POST direto e o PUT, sem
+possibilidade de contorná-la pela API. Rascunhos privados preservam dados vazios,
+sem essa validação, e uma conclusão inválida mantém o rascunho disponível.

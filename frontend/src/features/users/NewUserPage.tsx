@@ -1,12 +1,11 @@
 import { Navigate, useNavigate } from 'react-router'
 import { FormSection } from '../../components/ui/FormSection'
-import { getUserRole } from '../../lib/auth'
-import { useSessionToken } from '../auth/useSessionToken'
+import { useUserRole } from '../auth/useUserRole'
 import { AccountForm } from './AccountForm'
 
 export function NewUserPage() {
-  useSessionToken()
-  return getUserRole() === 'ADMIN' ? <NewUserRegistration /> : <Navigate to="/app" replace />
+  const role = useUserRole()
+  return role === 'ADMIN' ? <NewUserRegistration /> : <Navigate to="/app" replace />
 }
 
 function NewUserRegistration() {

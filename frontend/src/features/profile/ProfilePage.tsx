@@ -6,7 +6,8 @@ import { FormFeedback, type FormMessage } from '../../components/ui/FormFeedback
 import { FormSection } from '../../components/ui/FormSection'
 import { Input } from '../../components/ui/Input'
 import { ApiError } from '../../lib/api'
-import { clearTokens, markPasswordChanged, getUserRole, getUserSubject } from '../../lib/auth'
+import { clearTokens, markPasswordChanged, getUserSubject } from '../../lib/auth'
+import { useUserRole } from '../auth/useUserRole'
 import { changePassword, getProfile, updateProfile, type UserProfile } from './profile.api'
 
 function requestError(error: unknown) {
@@ -101,6 +102,7 @@ function PasswordForm({ available }: { available: boolean }) {
 }
 
 export function ProfilePage() {
+  const sessionRole = useUserRole()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -117,7 +119,7 @@ export function ProfilePage() {
     }).finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => controller.abort()
   }, [attempt])
-  const role = profile?.role ?? getUserRole()
+  const role = sessionRole ?? profile?.role
   const email = profile?.email ?? getUserSubject() ?? 'Indisponível'
 
   return <div className="mx-auto max-w-3xl space-y-6">

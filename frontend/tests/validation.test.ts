@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { mapStudentErrors } from '../src/features/student-registration/student-errors'
 import { studentDefaultValues, studentSchema, toStudentRequest } from '../src/features/student-registration/student.schema'
-import { memberDefaultValues, populationDefaultValues, populationSchema } from '../src/features/population-survey/population.schema'
+import { memberDefaultValues, populationDefaultValues, populationSchema, toPopulationRequest } from '../src/features/population-survey/population.schema'
 import { mapApiFormErrors } from '../src/lib/api-form-errors'
 import { isValidCep, isValidCpf, isValidDate, isValidPhone } from '../src/lib/validators'
 
@@ -103,4 +103,28 @@ describe('prioridade familiar', () => {
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error.issues.map((issue) => issue.path.join('.'))).toEqual(expect.arrayContaining(['father.name', 'guardian.name']))
   })
+})
+
+
+it('omite classificação vazia e preserva o identificador de uma resposta explícita', () => {
+  const values = populationDefaultValues()
+  values.responsible.name = 'Maria'
+  const absent = JSON.parse(JSON.stringify(toPopulationRequest(values)))
+  expect(absent.responsible).not.toHaveProperty('genderIdentityId')
+  const unknownId = '00000000-0000-4000-8000-000000000099'
+  values.responsible.genderIdentityId = unknownId
+  const explicit = JSON.parse(JSON.stringify(toPopulationRequest(values)))
+  expect(explicit.responsible.genderIdentityId).toBe(unknownId)
+})
+
+
+it('exige seis classificações para concluir e aceita IDs explícitos de Não informado', () => {
+  const data = populationDefaultValues()
+  data.responsible.name = 'Maria'
+  const fields = ['birthSexId', 'racialIdentityId', 'genderIdentityId', 'sexualOrientationId', 'maritalStatusId', 'schoolTypeId'] as const
+  const blank = populationSchema.safeParse(data)
+  expect(blank.success).toBe(false)
+  if (!blank.success) expect(blank.error.issues.map(issue => issue.path.join('.'))).toEqual(expect.arrayContaining(fields.map(field => `responsible.${field}`)))
+  for (const field of fields) data.responsible[field] = '00000000-0000-4000-8000-000000000001'
+  expect(populationSchema.safeParse(data).success).toBe(true)
 })

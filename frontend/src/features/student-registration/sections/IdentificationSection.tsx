@@ -10,7 +10,7 @@ import { ZipCodeInput } from '../../../components/ui/ZipCodeInput'
 import { MaskedInput } from '../../../components/ui/MaskedInput'
 import { Select } from '../../../components/ui/Select'
 import { useCatalog } from '../../catalogs/useCatalog'
-import { getUserRole } from '../../../lib/auth'
+import { useUserRole } from '../../auth/useUserRole'
 import type { StudentFormData } from '../student.schema'
 
 const statusOptions = [
@@ -19,6 +19,7 @@ const statusOptions = [
 ]
 
 export function IdentificationSection() {
+  const role = useUserRole()
   const {
     formState: { errors, isSubmitted },
     register,
@@ -73,11 +74,11 @@ export function IdentificationSection() {
             <button type="button" disabled={activities.isLoading} onClick={activities.reload} className="min-h-11 text-sm font-medium text-link underline underline-offset-4 disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed">
               {activities.isLoading ? 'Atualizando...' : 'Atualizar atividades'}
             </button>
-            {getUserRole() === 'ADMIN' && <Link to="/app/atividades" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-sm font-medium text-link underline underline-offset-4">
+            {role === 'ADMIN' && <Link to="/app/atividades" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-sm font-medium text-link underline underline-offset-4">
               Gerenciar atividades <span className="sr-only">(abre em nova aba)</span>
             </Link>}
           </div>
-          {!activities.isLoading && !activities.hasError && activities.items.length === 0 && <p className="text-sm text-secondary">{getUserRole() === 'ADMIN' ? 'Cadastre uma atividade e atualize a lista para selecioná-la.' : 'Peça a um administrador para cadastrar uma atividade.'}</p>}
+          {!activities.isLoading && !activities.hasError && activities.items.length === 0 && <p className="text-sm text-secondary">{role === 'ADMIN' ? 'Cadastre uma atividade e atualize a lista para selecioná-la.' : 'Peça a um administrador para cadastrar uma atividade.'}</p>}
         </div>
 
         <div className="sm:col-span-2">

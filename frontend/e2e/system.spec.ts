@@ -4,18 +4,25 @@ const activityId = '00000000-0000-4000-8000-000000000001'
 const studentId = '00000000-0000-4000-8000-000000000002'
 const surveyId = '00000000-0000-4000-8000-000000000003'
 const memberId = '00000000-0000-4000-8000-000000000004'
+const requiredPopulationFields = ['birthSexId', 'racialIdentityId', 'genderIdentityId', 'sexualOrientationId', 'maritalStatusId', 'schoolTypeId']
+const populationCategories = ['SEXO_NASCIMENTO', 'IDENTIFICACAO_RACIAL', 'GENERO', 'ORIENTACAO_SEXUAL', 'ESTADO_CIVIL', 'TIPO_ESCOLA']
+const classificationId = (index: number) => `00000000-0000-4000-8000-0000000000${index + 10}`
+
 const jwt = (expired = false) => `header.${Buffer.from(JSON.stringify({ sub: 'admin@teste.local', role: 'ADMIN', type: 'access', exp: Math.floor(Date.now() / 1000) + (expired ? -60 : 3600) })).toString('base64')}.signature`
 
 async function setup(page: Page, expired = false) {
   const state = {
     refreshes: 0, draftSaves: 0, puts: [] as Record<string, unknown>[],
     student: { id: studentId, revision: '2026-01-01T00:00:00Z', status: 'ATIVO', name: 'Ana Silva', activity: { id: activityId, name: 'Capoeira' }, birthDate: '2015-05-20', guardianPhone: '85999999999', relatives: [{ type: 'MAE', name: 'Maria' }], socioeconomic: { householdIncome: 1200.50, hasWaterSupply: false } } as Record<string, unknown>,
-    survey: { id: surveyId, revision: '2026-01-01T00:00:00Z', status: 'COMPLETED', referenceDate: '2026-01-01', responsible: { name: 'Maria Silva' }, members: [{ id: memberId, name: 'Maria Silva', isResponsible: true, kinship: 'Responsável', income: 0 }], financialSummary: { memberCount: 1, incomeComplete: true, totalIncome: 0, perCapitaIncome: 0 }, authorizations: { imageAndSound: false, personalData: true } } as Record<string, unknown>,
+    survey: { id: surveyId, revision: '2026-01-01T00:00:00Z', status: 'COMPLETED', referenceDate: '2026-01-01', responsible: { name: 'Maria Silva', ...Object.fromEntries(requiredPopulationFields.map((field, index) => [field, classificationId(index)])) }, members: [{ id: memberId, name: 'Maria Silva', isResponsible: true, kinship: 'Responsável', income: 0 }], financialSummary: { memberCount: 1, incomeComplete: true, totalIncome: 0, perCapitaIncome: 0 }, authorizations: { imageAndSound: false, personalData: true } } as Record<string, unknown>,
   }
   const drafts = new Map<string, Record<string, unknown>>()
   await page.addInitScript(({ token }) => {
-    localStorage.setItem('rosalina.accessToken', token)
-    localStorage.setItem('rosalina.refreshToken', 'browser-refresh')
+    if (!sessionStorage.getItem('browser-test-session-seeded')) {
+      localStorage.setItem('rosalina.accessToken', token)
+      localStorage.setItem('rosalina.refreshToken', 'browser-refresh')
+      sessionStorage.setItem('browser-test-session-seeded', 'true')
+    }
   }, { token: jwt(expired) })
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request()
@@ -24,7 +31,12 @@ async function setup(page: Page, expired = false) {
     const method = request.method()
     const body = request.postDataJSON() as Record<string, unknown> | null
     const fulfill = (data: unknown, status = 200) => route.fulfill({ status, json: data })
+    if (path === '/api/v1/me') return fulfill({ id: 'profile-1', name: 'Maria Silva', email: 'admin@teste.local', role: 'ADMIN' })
     if (path.endsWith('/auth/refresh')) { state.refreshes++; return fulfill({ accessToken: jwt(), refreshToken: 'browser-refresh-new' }) }
+    if (path === '/api/v1/catalogs' && populationCategories.includes(url.searchParams.get('category') ?? '')) {
+      const category = url.searchParams.get('category')!
+      return fulfill([{ id: classificationId(populationCategories.indexOf(category)), category, name: 'Não informado', active: true }])
+    }
     if (path === '/api/v1/catalogs') return fulfill(url.searchParams.get('category') === 'ATIVIDADE' || !url.searchParams.has('category') ? [{ id: activityId, category: 'ATIVIDADE', name: 'Capoeira', active: true }] : [])
     if (path === '/api/v1/form-drafts' && method === 'GET') return fulfill({ content: [...drafts.values()].filter((draft) => draft.formType === url.searchParams.get('formType')) })
     if (path === '/api/v1/form-drafts' && method === 'POST') {
@@ -108,6 +120,7 @@ test('responsável sincroniza e renda/parentesco são padronizados', async ({ pa
   await member.getByLabel('Parentesco', { exact: true }).selectOption('Responsável')
   await member.getByLabel('Renda mensal (R$)').fill('123456')
   await expect(member.getByLabel('Renda mensal (R$)')).toHaveValue('R$ 1.234,56')
+  for (const field of requiredPopulationFields) await page.locator(`#${field}`).selectOption({ label: 'Não informado' })
   await page.getByRole('button', { name: 'Salvar levantamento', exact: true }).click()
   await expect(page.getByRole('link', { name: 'Ver ficha do cadastro salvo' })).toHaveAttribute('href', `/app/levantamentos/${surveyId}`)
 })
@@ -367,6 +380,103 @@ test('trocar a senha retorna ao login com confirmação e preserva a cópia da a
   await page.getByRole('button', { name: 'Alterar senha', exact: true }).click()
   await expect(page).toHaveURL(/\/login$/)
   await expect(page.getByText('Senha alterada com sucesso. Suas sessões foram encerradas. Entre com a nova senha.')).toBeVisible()
+  expect(await page.evaluate(() => localStorage.getItem('rosalina.accessToken'))).toBeNull()
+  expect(await page.evaluate(() => sessionStorage.getItem('pending-example'))).toBe('preenchimento pendente')
+})
+
+test('tela inicial remove sessão revogada sem fingir login nem redirecionar', async ({ page }) => {
+  await setup(page)
+  await page.route('**/api/v1/me', route => route.fulfill({ status: 401, json: { message: 'Sessão revogada' } }))
+  await page.route('**/api/v1/auth/refresh', route => route.fulfill({ status: 401, json: { message: 'Sessão revogada' } }))
+  await page.goto('/')
+  const header = page.getByRole('banner')
+  await expect(header.getByRole('link', { name: 'Entrar', exact: true })).toBeVisible()
+  await expect(header.getByRole('button', { name: /Minha conta/ })).toHaveCount(0)
+  await expect(page).toHaveURL(/\/$/)
+  expect(await page.evaluate(() => localStorage.getItem('rosalina.accessToken'))).toBeNull()
+})
+
+test('primeira abertura e reload não produzem erros de hooks em contextos novos', async ({ browser, isMobile }) => {
+  test.setTimeout(60000)
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const context = await browser.newContext({ baseURL: 'http://127.0.0.1:4173', viewport: isMobile ? { width: 390, height: 844 } : { width: 1280, height: 900 }, isMobile, hasTouch: isMobile })
+    try {
+      const page = await context.newPage()
+      const errors: string[] = []
+      page.on('pageerror', error => errors.push(error.message))
+      page.on('console', message => {
+        if (message.type() === 'error' && /Invalid hook call|resolveDispatcher|Rendered (more|fewer) hooks|change in the order of Hooks/i.test(message.text())) errors.push(message.text())
+      })
+      await setup(page, attempt === 2)
+      if (attempt === 0) await context.addInitScript(() => localStorage.clear())
+      await page.goto('/')
+      if (attempt === 0) {
+        await expect(page.getByRole('banner').getByRole('link', { name: 'Entrar', exact: true })).toBeVisible()
+        await page.goto('/login')
+        await expect(page.getByLabel('E-mail', { exact: true })).toBeEditable()
+        await page.reload()
+        await expect(page.getByLabel('E-mail', { exact: true })).toBeEditable()
+      } else {
+        await expect(page.getByRole('button', { name: /Minha conta/ })).toBeVisible()
+        await page.goto('/app/alunos/novo')
+        await expect(page.getByLabel('Nome (obrigatório)', { exact: true })).toBeEditable()
+        await page.reload()
+        await expect(page.getByLabel('Nome (obrigatório)', { exact: true })).toBeEditable()
+      }
+      expect(errors, `Primeira abertura ${attempt + 1}`).toEqual([])
+    } finally { await context.close() }
+  }
+})
+
+
+test('classificações podem ficar vazias no rascunho, mas precisam de resposta na conclusão', async ({ page }) => {
+  await setup(page)
+  await page.goto('/app/levantamentos/novo')
+  await page.getByLabel('Nome (obrigatório)', { exact: true }).fill('Maria')
+  await page.getByRole('button', { name: 'Salvar levantamento', exact: true }).click()
+  for (const field of requiredPopulationFields) await expect(page.locator(`#${field}`)).toHaveAttribute('aria-invalid', 'true')
+  await page.getByRole('button', { name: 'Salvar rascunho agora' }).click()
+  await expect(page.getByText(/Rascunho salvo às/)).toBeVisible()
+  await page.reload()
+  await expect(page.getByLabel('Nome (obrigatório)', { exact: true })).toHaveValue('Maria')
+  for (const field of requiredPopulationFields) {
+    await expect(page.locator(`#${field}`)).toHaveValue('')
+    await page.locator(`#${field}`).selectOption({ label: 'Não informado' })
+  }
+  await page.getByRole('button', { name: 'Salvar levantamento', exact: true }).click()
+  await expect(page.getByRole('link', { name: 'Ver ficha do cadastro salvo' })).toBeVisible()
+})
+
+test('mudança de cargo atualiza menu e área administrativa sem renovar o token', async ({ page }) => {
+  const state = await setup(page)
+  let role = 'ADMIN'
+  await page.route('**/api/v1/me', route => route.fulfill({ json: { id: 'account', name: 'Admin', email: 'admin@teste.local', role } }))
+  await page.goto('/app/atividades')
+  await expect(page.getByRole('heading', { name: 'Atividades', exact: true })).toBeVisible()
+  const token = await page.evaluate(() => localStorage.getItem('rosalina.accessToken'))
+  role = 'OPERADOR'
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+  await expect(page).toHaveURL(/\/app$/)
+  const menu = page.getByRole('button', { name: 'Menu', exact: true })
+  if (await menu.isVisible()) await menu.click()
+  await expect(page.getByRole('link', { name: 'Usuários e acessos', exact: true })).toHaveCount(0)
+  role = 'ADMIN'
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+  await expect(page.getByRole('link', { name: 'Usuários e acessos', exact: true })).toBeVisible()
+  expect(await page.evaluate(() => localStorage.getItem('rosalina.accessToken'))).toBe(token)
+  expect(state.refreshes).toBe(0)
+})
+
+test('sessão revogada durante uma consulta retorna ao login e preserva a cópia local', async ({ page }) => {
+  await setup(page)
+  await page.goto('/app/alunos')
+  await expect(page.getByRole('heading', { name: 'Alunos cadastrados', exact: true })).toBeVisible()
+  await page.evaluate(() => sessionStorage.setItem('pending-example', 'preenchimento pendente'))
+  await page.route('**/api/v1/students?*', route => route.fulfill({ status: 401, json: { code: 'UNAUTHORIZED', message: 'Sessão revogada' } }))
+  await page.route('**/api/v1/auth/refresh', route => route.fulfill({ status: 401, json: { message: 'Sessão revogada' } }))
+  await page.getByRole('button', { name: 'Atualizar lista', exact: true }).click()
+  await page.waitForURL('**/login', { waitUntil: 'load' })
+  await expect(page.getByRole('heading', { name: 'Entrar', exact: true })).toBeVisible()
   expect(await page.evaluate(() => localStorage.getItem('rosalina.accessToken'))).toBeNull()
   expect(await page.evaluate(() => sessionStorage.getItem('pending-example'))).toBe('preenchimento pendente')
 })

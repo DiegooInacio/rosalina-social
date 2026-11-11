@@ -45,7 +45,7 @@ class AuthSecurityIntegrationTest {
     return mvc.perform(post("/api/v1/auth/"+path).contentType("application/json").content(json.writeValueAsString(Map.of("refreshToken",refresh))));
   }
   void deniedAccess(String access) throws Exception {
-    mvc.perform(get("/api/v1/me").header("Authorization","Bearer "+access)).andExpect(status().isForbidden());
+    mvc.perform(get("/api/v1/me").header("Authorization","Bearer "+access)).andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
   }
   @Test void rotationRejectsReuseAndRevokesDescendantsAndAccess() throws Exception {
     var original=login(); String token=original.get("refreshToken").asText();

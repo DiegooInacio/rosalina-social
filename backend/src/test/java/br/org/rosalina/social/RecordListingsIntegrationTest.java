@@ -25,6 +25,7 @@ class RecordListingsIntegrationTest {
   }
   @Autowired MockMvc mvc;
   @Autowired ObjectMapper json;
+  @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
 
   @Test void listsWithOmittedEmptyAndCombinedFiltersAndSerializesActivityOutsideTransaction() throws Exception {
     var login = mvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
@@ -59,7 +60,7 @@ class RecordListingsIntegrationTest {
     mvc.perform(get("/api/v1/students").header("Authorization", auth).param("page", "1").param("size", "1"))
         .andExpect(status().isOk()).andExpect(jsonPath("$.totalPages").value(2)).andExpect(jsonPath("$.content[0].name").value("Bia Consulta"));
     mvc.perform(post("/api/v1/population-surveys").header("Authorization", auth).contentType(MediaType.APPLICATION_JSON)
-        .content("{\"responsible\":{\"name\":\"Maria Consulta\",\"cpf\":\"11144477735\"}}"))
+        .content(PopulationChoicesFixture.fill((com.fasterxml.jackson.databind.node.ObjectNode) json.readTree("{\"responsible\":{\"name\":\"Maria Consulta\",\"cpf\":\"11144477735\"}}"), jdbc).toString()))
         .andExpect(status().isCreated());
     mvc.perform(get("/api/v1/population-surveys").header("Authorization", auth))
         .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(1));

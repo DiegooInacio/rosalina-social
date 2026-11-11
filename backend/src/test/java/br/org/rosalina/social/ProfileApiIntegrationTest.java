@@ -140,17 +140,17 @@ class ProfileApiIntegrationTest {
   }
 
   @Test void rejectsAnonymousInvalidRefreshAndInactiveAccounts() throws Exception {
-    mvc.perform(get("/api/v1/me")).andExpect(status().isForbidden());
+    mvc.perform(get("/api/v1/me")).andExpect(status().isUnauthorized());
     mvc.perform(patch("/api/v1/me").contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Outro\"}"))
-        .andExpect(status().isForbidden());
+        .andExpect(status().isUnauthorized());
     mvc.perform(put("/api/v1/me/password").contentType(MediaType.APPLICATION_JSON).content("{}"))
-        .andExpect(status().isForbidden());
+        .andExpect(status().isUnauthorized());
     for (String invalid : new String[]{"invalid", jwt.refresh(owner.getEmail())}) {
-      mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + invalid)).andExpect(status().isForbidden());
+      mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + invalid)).andExpect(status().isUnauthorized());
     }
     owner.setActive(false);
     users.save(owner);
-    mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + token)).andExpect(status().isForbidden());
+    mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + token)).andExpect(status().isUnauthorized());
   }
 
   @Test void userCreationRejectsPasswordsOverBcryptLimitWithFieldErrors() throws Exception {

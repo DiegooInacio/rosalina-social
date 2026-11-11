@@ -1,4 +1,4 @@
-import { clearTokens, getAccessToken, getRefreshToken, isAccessTokenExpired, setTokens, tokenSubject, withSessionLock } from './auth'
+import { clearTokens, getAccessToken, getRefreshToken, isAccessTokenExpired, setTokens, confirmUserRole, tokenSubject, withSessionLock } from './auth'
 
 const API_URL = import.meta.env.VITE_API_URL ?? ''
 
@@ -40,13 +40,13 @@ async function request(path: string, init?: RequestInit) {
   } finally { clearTimeout(timer); init?.signal?.removeEventListener('abort', forwardAbort) }
 }
 
-function expireSession() {
+function expireSession(redirect = true) {
   clearTokens()
-  window.location.assign('/login')
+  if (redirect) window.location.assign('/login')
   return new ApiError('Sua sessão expirou. Entre novamente para continuar. Seu preenchimento foi preservado nesta aba.', 401)
 }
 
-function renewAccessToken(token: string): Promise<string> {
+function renewAccessToken(token: string, redirect = true): Promise<string> {
   if (renewing?.token === token) return renewing.request
   if (renewed?.before === token && getAccessToken() === renewed.after) return Promise.resolve(renewed.after)
   if (getAccessToken() !== token) return Promise.reject(new ApiError('Sua sessão mudou. Recarregue a página antes de continuar.', 409))
@@ -57,7 +57,7 @@ function renewAccessToken(token: string): Promise<string> {
       throw new ApiError('Sua sessão mudou. Recarregue a página antes de continuar.', 409)
     }
     const refreshToken = getRefreshToken()
-    if (!refreshToken) throw expireSession()
+    if (!refreshToken) throw expireSession(redirect)
     const response = await request('/api/v1/auth/refresh', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshToken }),
     })
@@ -65,7 +65,7 @@ function renewAccessToken(token: string): Promise<string> {
     if (getAccessToken() !== token || getRefreshToken() !== refreshToken) {
       throw new ApiError('Sua sessão mudou. Recarregue a página antes de continuar.', 409)
     }
-    if (response.status === 401 || response.status === 403) throw expireSession()
+    if (response.status === 401 || response.status === 403) throw expireSession(redirect)
     if (!response.ok) throw new ApiError('Não foi possível renovar sua sessão agora. Tente novamente em instantes.', 503)
     let data
     try { data = await response.json() }
@@ -96,7 +96,7 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     },
   })
   let response = await send()
-  if (token && (response.status === 401 || (response.status === 403 && isAccessTokenExpired(token)))) {
+  if (token && response.status === 401) {
     token = await renewAccessToken(token)
     response = await send()
     if (response.status === 401) throw expireSession()
@@ -127,4 +127,37 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
 
   try { return await response.json() as T }
   catch { throw new ApiError('A API retornou uma resposta inválida. Verifique a configuração do servidor e tente novamente.', 502) }
+}
+
+
+// Public pages validate credentials without sending visitors away from the page.
+export async function verifySession(expectedToken: string): Promise<string | null> {
+  let token = expectedToken
+  const current = () => getAccessToken() === token
+  try {
+    if (!current()) return null
+    if (isAccessTokenExpired(token)) token = await renewAccessToken(token, false)
+    const send = () => request('/api/v1/me', { headers: { Authorization: `Bearer ${token}` } })
+    let response = await send()
+    if (!current()) return null
+    if (response.status === 401 || response.status === 403) {
+      token = await renewAccessToken(token, false)
+      response = await send()
+    }
+    if (!current()) return null
+    if (response.status === 401 || response.status === 403) { clearTokens(); return null }
+    if (!response.ok) throw new ApiError('Não foi possível verificar sua sessão. Tente novamente.', response.status)
+    let profile
+    try { profile = await response.json() }
+    catch { throw new ApiError('Resposta inválida ao verificar a sessão.', 502) }
+    if (typeof profile?.id !== 'string' || profile.email !== tokenSubject(token) || !['ADMIN', 'OPERADOR'].includes(profile.role)) {
+      throw new ApiError('Resposta inválida ao verificar a sessão.', 502)
+    }
+    if (!current()) return null
+    confirmUserRole(token, profile.role)
+    return token
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) return null
+    throw error
+  }
 }

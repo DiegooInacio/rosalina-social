@@ -1,3 +1,4 @@
+import { selectPopulationChoices } from './population-choices.fixture'
 import { Activity, StrictMode } from 'react'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -7,7 +8,7 @@ import { StudentRegistrationForm } from '../src/features/student-registration/St
 import { PopulationSurveyForm } from '../src/features/population-survey/PopulationSurveyForm'
 import { draftStorageKey, readPending } from '../src/features/drafts/draft-storage'
 import type { FormDraft, FormType } from '../src/features/drafts/drafts.api'
-import { setTokens } from '../src/lib/auth'
+import { setTokens, getUserSubject } from '../src/lib/auth'
 import { PrivateLayout } from '../src/layouts/PrivateLayout'
 import * as cep from '../src/lib/cep'
 
@@ -48,6 +49,7 @@ async function saveNow() {
 function calls(method: string) { return fetchMock.mock.calls.filter(([, init]) => init?.method === method) }
 function valid(type: FormType) {
   change('Nome (obrigatório)', 'Maria')
+  if (type === 'POPULATION_SURVEY') selectPopulationChoices()
   if (type === 'STUDENT') {
     change('Atividade matriculada (obrigatória)', activityId)
     change('Data de nascimento (obrigatória)', '20/05/2015')
@@ -64,6 +66,7 @@ beforeEach(() => {
   fetchMock.mockReset()
   fetchMock.mockImplementation(async (input, init) => {
     const url = new URL(String(input), 'http://localhost')
+    if (url.pathname === '/api/v1/me') return Response.json({ id: 'account', email: getUserSubject(), role: 'OPERADOR' })
     const body = init?.body ? JSON.parse(String(init.body)) : {}
     const method = init?.method ?? 'GET'
     const suffix = url.pathname.replace('/api/v1/form-drafts', '')

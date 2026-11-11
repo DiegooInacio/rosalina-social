@@ -11,7 +11,7 @@ const catalogs = [
   ['racialIdentityId', 'Identificação racial', 'IDENTIFICACAO_RACIAL'],
   ['genderIdentityId', 'Identificação de gênero', 'GENERO'],
   ['sexualOrientationId', 'Orientação sexual', 'ORIENTACAO_SEXUAL'],
-  ['maritalStatusId', 'Estado civil', 'ESTADO_CIVIL'],
+  ['maritalStatusId', 'Estado civil / situação conjugal', 'ESTADO_CIVIL'],
   ['educationId', 'Escolaridade', 'ESCOLARIDADE'],
   ['schoolTypeId', 'Tipo de escola', 'TIPO_ESCOLA'],
 ] as const
@@ -21,7 +21,7 @@ export function ResponsibleSection() {
   const documentType = useWatch({ control, name: 'responsible.documentType' })
   const e = errors.responsible
   return (
-    <FormSection title="Responsável familiar" description="O nome é obrigatório. Os demais dados são opcionais. As opções de seleção são fornecidas pela organização.">
+    <FormSection title="Responsável familiar" description="Preencha o nome e as seis classificações obrigatórias para concluir. Não informado é uma resposta válida. Rascunhos podem ficar incompletos; os demais dados são opcionais.">
       <div className="grid gap-4 sm:grid-cols-2">
         <MaskedInput id="referenceDate" label="Data de referência (obrigatória)" mask="date" placeholder="dd/mm/aaaa" aria-required="true" error={errors.referenceDate?.message} {...register('referenceDate')} />
         <Input id="responsible-name" label="Nome (obrigatório)" aria-required="true" error={e?.name?.message} {...register('responsible.name')} />
@@ -29,7 +29,7 @@ export function ResponsibleSection() {
         <MaskedInput id="responsible-birthDate" label="Data de nascimento" mask="date" placeholder="dd/mm/aaaa" error={e?.birthDate?.message} {...register('responsible.birthDate')} />
         <Input id="age" label="Idade na data de referência" inputMode="numeric" placeholder="Calculada ao salvar se houver nascimento" error={e?.age?.message} {...register('responsible.age')} />
         {catalogs.map(([field, label, category]) => (
-          <CatalogSelect key={field} id={field} label={label} category={category} error={e?.[field]?.message} {...register(`responsible.${field}`)} />
+          <CatalogSelect key={field} id={field} label={field === 'educationId' ? label : `${label} (obrigatório)`} required={field !== 'educationId'} category={category} error={e?.[field]?.message} {...register(`responsible.${field}`)} />
         ))}
         <MaskedInput id="responsible-cpf" label="CPF" hint={cpfHint} mask="cpf" error={e?.cpf?.message} {...register('responsible.cpf')} />
         <Controller control={control} name="responsible.documentNumber" render={({ field }) => (

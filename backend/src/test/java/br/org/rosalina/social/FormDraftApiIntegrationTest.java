@@ -87,6 +87,7 @@ class FormDraftApiIntegrationTest {
   }
 
   ObjectNode completion(long version, ObjectNode submission) {
+    PopulationChoicesFixture.fill(submission, jdbc);
     var body = json.createObjectNode().put("version", version);
     body.set("submission", submission);
     return body;
@@ -95,6 +96,19 @@ class FormDraftApiIntegrationTest {
   ResultActions finish(String id, ObjectNode body, String token) throws Exception {
     return mvc.perform(post(DRAFTS + "/" + id + "/complete").header("Authorization", "Bearer " + token)
         .contentType(MediaType.APPLICATION_JSON).content(body.toString()));
+  }
+
+  @Test void classificationsMayBeBlankInDraftButAreRequiredAtCompletion() throws Exception {
+    ObjectNode raw = object("{\"responsible\":{\"name\":\"Maria\"}}");
+    var draft = create("POPULATION_SURVEY", raw);
+    String id = draft.get("id").asText();
+    var request = json.createObjectNode().put("version", 0);
+    request.set("submission", raw);
+    var error = read(finish(id, request, owner).andExpect(status().isBadRequest()));
+    PopulationChoicesFixture.FIELDS.keySet().forEach(field -> assertTrue(error.get("fields").has("responsible." + field)));
+    mvc.perform(get(DRAFTS + "/" + id).header("Authorization", "Bearer " + owner))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("DRAFT")).andExpect(jsonPath("$.data.responsible.name").value("Maria"));
+    finish(id, completion(0, raw), owner).andExpect(status().isOk());
   }
 
   @Test void preservesRawIncompleteDataForBothFormsWithoutCreatingRecords() throws Exception {
@@ -147,9 +161,9 @@ class FormDraftApiIntegrationTest {
       mvc.perform(delete(DRAFTS + "/" + id).param("version", "0").header("Authorization", "Bearer " + other)).andExpect(status().isNotFound());
       finish(id, completion(0, object("{\"responsible\":{\"name\":\"Maria\"}}")), other).andExpect(status().isNotFound());
     }
-    mvc.perform(get(DRAFTS + "/" + id)).andExpect(status().isForbidden());
-    mvc.perform(post(DRAFTS).contentType(MediaType.APPLICATION_JSON).content("{} ")).andExpect(status().isForbidden());
-    mvc.perform(delete(DRAFTS + "/" + id).param("version", "0")).andExpect(status().isForbidden());
+    mvc.perform(get(DRAFTS + "/" + id)).andExpect(status().isUnauthorized());
+    mvc.perform(post(DRAFTS).contentType(MediaType.APPLICATION_JSON).content("{} ")).andExpect(status().isUnauthorized());
+    mvc.perform(delete(DRAFTS + "/" + id).param("version", "0")).andExpect(status().isUnauthorized());
   }
 
   @Test void failedCompletionValidatesFullRequestAndKeepsDraftUntouched() throws Exception {
@@ -230,6 +244,7 @@ class FormDraftApiIntegrationTest {
     String uniqueName = "Concorrente " + UUID.randomUUID();
     var submission = json.createObjectNode();
     submission.set("responsible", json.createObjectNode().put("name", uniqueName));
+    PopulationChoicesFixture.fill(submission, jdbc);
     String body = completion(0, submission).toString();
     CountDownLatch start = new CountDownLatch(1);
     try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
